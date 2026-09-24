@@ -3,11 +3,11 @@ import { useMemo, type ReactNode } from "react";
 import { useUi } from "../lib/ui-context";
 import { Button, Card, PageSkeleton, Verdict } from "../components/ui";
 import { InlineCard } from "../components/Cards";
-import { MonthBars, Ring, SpreadBars, TileGrid } from "../components/Charts";
-import { bySource, foundStory, moneyByMonth, topItems, wroteInSplit } from "../lib/charts";
+import { Ring, SpreadBars, TileGrid } from "../components/Charts";
+import { bySource, foundStory, topItems, wroteInSplit } from "../lib/charts";
 import { statusLabel } from "../lib/engine";
 import type { StatusKey } from "../lib/engine";
-import { money, plural } from "../lib/format";
+import { dateWords, money, plural } from "../lib/format";
 import { inlineCard } from "../lib/cards";
 import type { IconName } from "../components/icons";
 
@@ -38,22 +38,14 @@ export default function Dashboard() {
     const cameBack = people.filter((p) => p.cameBack);
     const unanswered = cards.filter((c) => c.kind === "unanswered");
     /*
-      T116 (Rev 29) — ⛔ THE NUMBER AND THE BARS CAME FROM DIFFERENT WINDOWS.
-      The headline summed `spent12` — a rolling twelve months — and sat beside a
-      chart of the last SIX. The review measured it: "$390,589" above bars that
-      summed to $142,329. Two true numbers, one card, and no way for a reader to
-      know they were answering different questions.
-      One function now: the bars are the source, and the headline is their sum.
+      T122 (Rev 31) — the "Money in the last 6 months" tile and its chart are
+      gone (removal-map item b, decided). `slipping` is kept — the brief was
+      explicit: leave it alone — and gets its OWN tile below instead of living
+      inside the removed money card, since it was never really about the
+      headline number: it names one person who used to pay and hasn't been back.
     */
-    /* ⛔ SIX, NOT TWELVE, AND THE PHONE DECIDED IT. Twelve bars made the
-       Dashboard and Needs you scroll sideways at 375px — A39c caught it. The
-       review allowed either window as long as the number and the bars agree, so
-       the WINDOW shrinks and the HEADLINE is relabelled to match, rather than
-       keeping a grander number that breaks a screen. */
-    const months = moneyByMonth(model, 6);
-    const year = months.reduce((n, pt) => n + pt.value, 0);
     const slipping = [...people].filter((p) => p.isQuiet && p.spent12 > 0).sort((a, b) => b.spent12 - a.spent12)[0];
-    return { total: people.length, wrote: wrote.length, became: became.length, cameBack, unanswered, year, months, slipping };
+    return { total: people.length, wrote: wrote.length, became: became.length, cameBack, unanswered, slipping };
   }, [model, cards]);
 
   /** Every chart's points, built from the same events every other screen reads. */
@@ -62,15 +54,11 @@ export default function Dashboard() {
     source: bySource(model),
     split: wroteInSplit(model),
     items: topItems(model),
-    /* T116 — the chart draws the very array the headline added up. */
-    months: moneyByMonth(model, 6),
   }), [model]);
 
   if (ui.loading) return <PageSkeleton rows={4} />;
 
   const card = inlineCard(cards, "dashboard");
-  const hiddenCount = model.list.filter((p) => p.c.hidden).length;
-  const erasedCount = model.list.filter((p) => p.c.erased).length;
 
   if (stats.total === 0) {
     return (
@@ -242,27 +230,55 @@ export default function Dashboard() {
           <Next icon="mail" onClick={() => ui.go("#/conversation")}>Reply to the oldest</Next>
         </Tile>
 
+        {/*
+          T122 (Rev 31) — the money headline and its month-by-month chart are
+          gone. `slipping` reads spent12 too, so it stays owner-only (R10), but it
+          never needed the headline to make sense on its own — it names one
+          person, not a total.
+
+          ⛔ "QUIET" IS A RETIRED WORD (Design §10.1, checked by A33) and I wrote
+          it into this tile's first draft without checking — caught by the suite,
+          not by me. The status this reads is already named elsewhere in the app:
+          `isQuiet` renders as "Hasn't been back" everywhere else (engine.ts:51),
+          so this uses the SAME words rather than inventing a second phrase for
+          one thing.
+
+          ⛔ ALWAYS RENDERED, LIKE EVERY OTHER TILE ON THIS PAGE, with three
+          honest states rather than disappearing when there is nothing to say —
+          the same pattern "Back after you reached out" and "Nobody answered"
+          already use for their own zero counts.
+        */}
+        {/*
+          ⛔ FOUND BY LOOKING, NOT ASSUMED: THE FIRST VERSION POOLED WHITE SPACE.
+          One line of text and a button in a two-wide card left the same dead
+          gap T53 already named ("this tile ended in a pool of white") — worse
+          here, because span 2 gives it double the room to be empty in. The fix
+          T53 used is the same one that applies: give the tile something more
+          to say, not less room to say it in. `spentTotal` and `lastBuy` are
+          already on the Profile — this is the one tile in a good position to
+          show them, since it exists specifically because they are worth a
+          second look.
+        */}
         {showMoney ? (
-          <Tile title="Money in the last 6 months" span={2}>
+          <Tile title="Used to pay, hasn't been back" span={2}>
             {paymentsDown ? (
-              <p className="t-body" data-testid="money-unknown">Alloro can't see your payments, so this is unknown.</p>
-            ) : (
+              <p className="t-body" data-testid="money-unknown">Alloro can't see your payments right now, so this is unknown.</p>
+            ) : stats.slipping ? (
               <>
-                <p className="t-hero">{money(stats.year)}</p>
+                <p className="t-body font-semibold">{stats.slipping.c.name} used to pay, and hasn't been back.</p>
                 <p className="t-meta mb-3">
-                  from the people in your list.
-                  {hiddenCount || erasedCount
-                    ? ` ${plural(hiddenCount + erasedCount, "person", "people")} hidden or erased ${hiddenCount + erasedCount === 1 ? "is" : "are"} left out.`
-                    : ""}
+                  {money(stats.slipping.spentTotal)} altogether
+                  {stats.slipping.lastBuy ? `, last paid ${dateWords(stats.slipping.lastBuy, world.today)}.` : "."}
                 </p>
-                <MonthBars title="Money by month" points={charts.months} />
               </>
+            ) : (
+              <p className="t-meta">Everybody who used to pay is still coming back.</p>
             )}
             <Next
               icon={stats.slipping ? "person" : "people"}
-              onClick={() => ui.go(stats.slipping ? `#/p/${stats.slipping.c.id}` : "#/people")}
+              onClick={() => ui.go(stats.slipping ? `#/p/${stats.slipping!.c.id}` : "#/people")}
             >
-              {stats.slipping ? `${stats.slipping.c.name} is slipping — check in` : "See your list"}
+              {stats.slipping ? `Check in with ${stats.slipping.c.name}` : "See your list"}
             </Next>
           </Tile>
         ) : null}
@@ -336,13 +352,19 @@ function statusPoints(model: ReturnType<typeof useUi>["model"], label: (k: strin
 function Tile({ title, children, span = 1 }: { title: string; children: ReactNode; span?: 1 | 2 | 3 }) {
   /*
     ⛔ NOTHING SPANS TWO AT THE TWO-COLUMN BREAKPOINT, and that is arithmetic,
-    not taste. With spans of 2,1,1,1,2,1,2,1 the widths sum to 11 across rows of
-    two — an odd total cannot fill even rows, so one cell is always blank and no
-    amount of dense packing closes it. At one span each the totals are 8 for the
-    owner and 6 for staff: both even, both exact.
+    not taste. `cls` only ever sets `lg:col-span-N` — there is no `sm:col-span`
+    override — so at the two-column breakpoint every tile is exactly one slot
+    wide regardless of its `span` prop, and what has to divide evenly is the
+    TILE COUNT, not the sum of their spans: 8 for the owner, 6 for staff, both
+    even, both exact.
 
-    Three columns keeps the wide tiles, because there the totals DO work out:
-    2+1+1+1+2+1+3+1 = 12 for the owner and 9 for staff, four rows and three.
+    Three columns keeps the wide tiles, and there it IS the span sum that has
+    to work: 2+1+1+1+2+1+3+1 = 12 for the owner and 9 for staff, four rows and
+    three. ⛔ T122 (Rev 31) replaced the money tile (span 2) with "Used to pay,
+    hasn't been back" — kept at span 2, same position, for exactly this reason:
+    changing it to span 1 breaks the arithmetic and opens a hole two rows later,
+    where "Where your list came from" (span 3) can no longer start a fresh row.
+    Verified by re-measuring with A45 after the change, not assumed from the sum.
   */
   const cls =
     span === 3 ? "lg:col-span-3"

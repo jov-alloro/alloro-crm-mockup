@@ -207,21 +207,10 @@ export function topItems(m: Model, n = 5): Point[] {
     .map(([name, sum]) => ({ label: name, value: sum, display: money(sum) }));
 }
 
-/** Money by month, the last six, oldest first. */
-export function moneyByMonth(m: Model, n = 6): Point[] {
-  const out: Point[] = [];
-  const [ty, tm] = m.world.today.split("-").map(Number);
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(Date.UTC(ty, tm - 1 - i, 1));
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-    let sum = 0;
-    for (const p of m.visible) for (const b of p.buys) if (b.date.startsWith(key)) sum += b.amount;
-    out.push({ label: MONTHS[d.getUTCMonth()], value: sum, display: money(sum) });
-  }
-  return out;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/* T122 (Rev 31) — ⛔ moneyByMonth AND ITS MONTHS[] TABLE ARE GONE, WITH THEIR
+   ONLY CONSUMER. The Dashboard's "Money in the last 6 months" tile was the sole
+   caller (removal-map item b, decided). "Dead exports go" is the standing rule
+   here — verified by grep before removal: no other file referenced either. */
 
 function yearAgo(today: string): string {
   const [y, m, d] = today.split("-").map(Number);

@@ -8,7 +8,7 @@ import { Menu, type MenuOption } from "../components/Menu";
 import { InlineCard } from "../components/Cards";
 import { FOUND_LABEL, GOT_LABEL, statusLabel, type Profile } from "../lib/engine";
 import { STAGES, type Stage } from "../lib/packs";
-import { money, plural, relativeDay } from "../lib/format";
+import { plural, relativeDay } from "../lib/format";
 import { inlineCard } from "../lib/cards";
 import type { GotKey, FoundKey } from "../data/types";
 import type { PeopleFilter } from "../lib/router";
@@ -28,11 +28,27 @@ type MarkFilter = "none" | "not-a-fit" | "do-not-contact" | "hidden";
  * One value, not two pieces of state: two would let "name" and "low" be true at
  * the same time, which is a state the screen cannot draw.
  */
+/**
+ * T121 (Rev 31) — ⛔ THE MONEY SORTS ARE GONE, NOT JUST THE COLUMNS THAT
+ * OFFERED THEM.
+ *
+ * Removing "Spent this year" and "Spent ever" from the table and leaving
+ * year-high/year-low/total-high/total-low in this type is exactly how "total"
+ * went unreachable for fourteen revisions the first time — a value the source
+ * knows about and no screen can reach. Not repeating that: the sorts leave with
+ * their columns, in the same edit.
+ *
+ * ⛔ THIS ALSO CLOSES A LIVE DEFECT THE RESEARCH ROUND FOUND. A list sorted by
+ * money stayed sorted by money after switching to a staff viewer — the header
+ * disappeared (showMoney gated it) but the ORDER did not reset, so a staff
+ * viewer's list could be silently shaped by money they are not allowed to see,
+ * with nothing on screen saying why. With no money SortKey left to hold, that
+ * state cannot exist for any viewer, ever — not staff-gated away, structurally
+ * absent.
+ */
 type SortKey =
   | "name-az" | "name-za"
-  | "last-new" | "last-old"
-  | "year-high" | "year-low"
-  | "total-high" | "total-low";
+  | "last-new" | "last-old";
 
 /** T79 (Rev 17) — what one header's menu is; see the note above Th. */
 type ThMenu = {
@@ -186,10 +202,6 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
           if (!x || !y) return x === y ? 0 : x ? -1 : 1;
           return x.localeCompare(y);
         }
-        case "year-high": return b.spent12 - a.spent12;
-        case "year-low": return a.spent12 - b.spent12;
-        case "total-high": return b.spentTotal - a.spentTotal;
-        case "total-low": return a.spentTotal - b.spentTotal;
         default: return a.c.name.localeCompare(b.c.name);
       }
     });
@@ -703,21 +715,14 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
                     { value: "last-new", label: "Newest first", dir: "down" },
                     { value: "last-old", label: "Oldest first", dir: "up" },
                   ])}>Last thing</Th>
-                  {showMoney ? (
-                    <Th menu={sortMenu("year", "Spent this year", [
-                      { value: "year-high", label: "Most first", dir: "down" },
-                      { value: "year-low", label: "Least first", dir: "up" },
-                    ])}>Spent this year</Th>
-                  ) : null}
-                  {/* T71 — ⛔ THIS HEADER IS THE BUG FIX. SortKey has carried
-                      "total" since the table was built, the sort handles it, and
-                      no header set it: unreachable for fourteen revisions. */}
-                  {showMoney ? (
-                    <Th menu={sortMenu("total", "Spent ever", [
-                      { value: "total-high", label: "Most first", dir: "down" },
-                      { value: "total-low", label: "Least first", dir: "up" },
-                    ])}>Spent ever</Th>
-                  ) : null}
+                  {/* T121 (Rev 31) — ⛔ "SPENT THIS YEAR" AND "SPENT EVER" ARE GONE, BY
+                      DECISION, NOT BY ACCIDENT. Money left this table's headline
+                      role: the list is who to talk to, not what they are worth.
+                      A person's own page still carries the full ledger; the
+                      dashboard's "slipping" tile and the task cards still read
+                      the same figures. See reference/removal-map-2026-09-25.md
+                      item (a) for the full dependency accounting — this is the
+                      part of it that was decided rather than left open. */}
                   {/* T79 — ⛔ THIS MENU USED TO FILTER THE OWNER'S MARKS under a
                       label that said "Added by". It filters who added them now. */}
                   <Th menu={filterMenu("added", addedBy, setAddedBy,
@@ -728,7 +733,7 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
               </thead>
               <tbody>
                 {shown.map((p) => (
-                  <Row key={p.c.id} p={p} showMoney={showMoney} onOpen={() => ui.go(`#/p/${p.c.id}`)} />
+                  <Row key={p.c.id} p={p} onOpen={() => ui.go(`#/p/${p.c.id}`)} />
                 ))}
               </tbody>
             </table>
@@ -819,8 +824,16 @@ function markLabel(m: MarkFilter): string {
  */
 function Th({ children, menu }: { children?: React.ReactNode; menu?: ThMenu }) {
   /* T82 (Rev 18) — px-2, not px-3. Seven columns × 8px is the last of the width
-     the cut needed, and at this type size the gap still reads as a gap. */
-  const cls = "whitespace-nowrap px-2 py-2 text-left align-middle text-xs font-bold uppercase tracking-wide text-ink-muted-text-safe";
+     the cut needed, and at this type size the gap still reads as a gap.
+
+     T124 (Rev 31) — ⛔ ONE TRACKING TOKEN, NOT TWO, FOR THE SAME LABEL. This used
+     to hand-assemble Tailwind's text-xs/font-bold/uppercase/tracking-wide to
+     approximate the eyebrow recipe, and landed one step off it: tracking-wide
+     is 0.025em, .eyebrow's own --tracking-eyebrow is 0.05em — the same 12px/700
+     label, drawn from two different tokens (mockup-heading-census-2026-09-25.md).
+     Using the class directly removes the second token instead of tuning it to
+     match; if .eyebrow's own value ever moves, every header moves with it. */
+  const cls = "whitespace-nowrap px-2 py-2 text-left align-middle eyebrow";
   if (!menu) return <th className={cls}>{children}</th>;
   return (
     /* ⛔ data-on IS HOW A CHECK CAN SEE THAT A HEADER IS CARRYING A FILTER.
@@ -898,9 +911,8 @@ function Segment({
   );
 }
 
-function Row({ p, showMoney, onOpen }: { p: Profile; showMoney: boolean; onOpen: () => void }) {
+function Row({ p, onOpen }: { p: Profile; onOpen: () => void }) {
   const ui = useUi();
-  const feedDown = !ui.world.feeds.payments.ok;
   /**
    * ⛔ THE WHOLE ROW OPENS THE PERSON. Before this, only the NAME cell was a
    * button and the other six cells were dead — clicking a row, which is the
@@ -949,19 +961,7 @@ function Row({ p, showMoney, onOpen }: { p: Profile; showMoney: boolean; onOpen:
       <td className="px-2 py-3 whitespace-nowrap text-ink-muted-text-safe">
         {p.events[0] ? relativeDay(p.events[0].date, ui.world.today) : <span className="t-meta">Nothing yet</span>}
       </td>
-      {showMoney ? (
-        <td className="px-2 py-3 whitespace-nowrap">
-          {/* ⛔ Never "$0" — a zero is a claim, an unknown is a state (Design §8.3). */}
-          {feedDown || !p.buys.length ? <span className="t-meta">—</span>
-            : p.spent12 > 0 ? money(p.spent12)
-            : <span className="t-meta">Nothing this year</span>}
-        </td>
-      ) : null}
-      {showMoney ? (
-        <td className="px-2 py-3 whitespace-nowrap">
-          {feedDown || !p.buys.length ? <span className="t-meta">—</span> : money(p.spentTotal)}
-        </td>
-      ) : null}
+      {/* T121 (Rev 31) — the two money cells left with their columns. */}
       {/* ⛔ "Theresa Okafor" wrapped to two lines on EVERY row, so one two-word
           name made the whole table tall. Found by looking at desktop-people.png. */}
       <td className="whitespace-nowrap px-2 py-3 text-ink-muted-text-safe">{p.c.addedBy}</td>

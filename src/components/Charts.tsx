@@ -186,47 +186,8 @@ export function SpreadBars({
   );
 }
 
-/**
- * Columns, one per month; the last column is solid, earlier ones are lighter.
- *
- * ⛔ THIS HAD THE SAME STRETCHED-RADIUS BUG AND I FIXED ONLY THE OTHER CHART.
- * `viewBox="0 0 10 {h}"` with `preserveAspectRatio="none"`, rendered ~100px wide,
- * is a 10x horizontal stretch, so `rx="1.5"` drew as a 15px x 1.5px ellipse —
- * six of them, on the same screen I had just looked at. A49 caught it; my eyes
- * did not, because at that size the taper reads as "a bar". <b>The check is the
- * reason this is fixed, not the looking.</b> HTML now, so the radius is real.
- */
-export function MonthBars({ title, points }: { title: string; points: Point[] }) {
-  const max = Math.max(1, ...points.map((p) => p.value));
-  return (
-    <Figure title={title} points={points} className="flex flex-col gap-1">
-      <div className="flex h-[104px] items-end gap-1.5 sm:gap-2" aria-hidden="true">
-        {points.map((pt, i) => {
-          const pct = pt.value === 0 ? 2 : Math.max(4, Math.round((pt.value / max) * 100));
-          const now = i === points.length - 1;
-          return (
-            <div key={pt.label} className="flex min-w-0 flex-1 flex-col items-center justify-end">
-              <div
-                className={`w-full rounded-t-[3px] ${now ? "bg-alloro-navy" : "bg-alloro-navy/30"}`}
-                style={{ height: `${pct}%` }}
-              />
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex gap-1.5 sm:gap-2" aria-hidden="true">
-        {points.map((pt) => (
-          <span key={pt.label} className="t-meta min-w-0 flex-1 truncate text-center">{pt.label}</span>
-        ))}
-      </div>
-      {/* ⛔ The newest month's value in words, outside the SVG. Putting it above
-          each column looked tidy at 1280px and collided at 375px. */}
-      <p className="t-meta mt-1">
-        {points[points.length - 1]?.label}: <b className="text-alloro-navy">{points[points.length - 1]?.display}</b>
-      </p>
-    </Figure>
-  );
-}
+/* T122 (Rev 31) — MonthBars removed with its only consumer, the Dashboard's
+   money-by-month chart (removal-map item b, decided). No other screen used it. */
 
 /** A ring split into parts, with a key beside it. Each part is a control. */
 /**

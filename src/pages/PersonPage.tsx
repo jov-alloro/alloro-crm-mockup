@@ -778,8 +778,16 @@ function EditSheet({ p, onClose }: { p: Profile; onClose: () => void }) {
         hint="Alloro uses this to know when a message is from them." />
       <Field label="Phone" value={phone} onChange={setPhone} testId="edit-phone"
         hint="Used the same way as the email, when there is no email." />
+      {/*
+        T123 (Rev 31) — ⛔ A HINT THAT NAMED MONEY TO SOMEBODY WHO CANNOT SEE ANY.
+        Editing is open to staff (this round's decision), but R10 still says
+        staff see no money. Owner reads what moving a company changes; staff
+        reads what moving them does — same fact, the number just isn't in it.
+      */}
       <Field label="Company" value={company} onChange={setCompany} testId="edit-company"
-        hint="Moving them moves their money to that company's page too." />
+        hint={canSeeMoney(ui.viewer)
+          ? "Moving them moves their money to that company's page too."
+          : "Moves them to that company's own page too."} />
       {clash ? <p className="t-meta mb-3" data-testid="edit-clash">{clash}</p> : null}
       {/* ⛔ The fields NOT here are the ones Alloro works out. Said on the screen,
           not only in the code, so nobody has to guess why. */}
