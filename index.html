@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- An internal mockup on a public URL should not be listed by search
+         engines. robots.txt asks and a header tells, but GitHub Pages serves
+         this from a subpath where robots.txt at the domain root does not
+         apply and no header can be set. This meta tag works on both hosts. -->
+    <meta name="robots" content="noindex, nofollow, noarchive" />
     <title>Customers — Alloro</title>
   </head>
   <body>
