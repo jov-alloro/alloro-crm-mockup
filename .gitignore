@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Internal working files. Deliberately not published — see the note in the README
+# about what this repository is and is not.
+AGENTS.md
+CONTEXT.md
+PROMPT.md
+reference/
+spec/
+present/
+proof/
+verify/

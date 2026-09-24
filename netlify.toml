@@ -1,0 +1,25 @@
+# Alloro CRM v2 mockup — build and headers.
+#
+# The app is a single self-contained document: Vite inlines the script and the
+# stylesheet into dist/index.html, so the deployed site is one file and makes no
+# network requests of its own.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # The version this builds on locally. If a build fails on an unavailable
+  # version, lower it to the newest one Netlify offers that still satisfies
+  # Vite 7 (Node 20.19+ or 22.12+).
+  NODE_VERSION = "24.12.0"
+
+# An internal mockup on a public URL should not be listed by search engines.
+# robots.txt asks; this header tells.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+# ⛔ No _redirects file and no SPA rewrite. This app is a hash router (#/people),
+# so every address is the same one document and a rewrite would do nothing.

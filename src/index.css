@@ -1,0 +1,288 @@
+/*
+  ⛔ SOURCE SCANNING IS RESTRICTED TO src/ ON PURPOSE.
+
+  Tailwind 4 scans the whole project for class-shaped text by default — and
+  "the whole project" includes CONTEXT.md, spec/spec.html and reference/*.md.
+  Those files DISCUSS Alloro's own raw palette classes (they say which ones this
+  mockup refuses to copy), so the default scan GENERATED `.border-slate-200` and
+  friends into the built CSS: real rules, rendered by nothing, and enough to fail
+  acceptance A41's "no raw palette class in the build".
+
+  ⛔ The first fix was to stop spelling the class in a code comment. That was
+  wrong about the cause — the comment was never the source, the prose was — and
+  the build still carried the rule. `source(none)` plus one explicit `@source`
+  is the fix: the scanner only reads the code that renders.
+*/
+@import "tailwindcss" source(none);
+@source "../src";
+
+/*
+  Spec §3.5 — THIS MOCKUP'S OWN COPY of Alloro's design tokens and type.
+
+  The values were read read-only from the Alloro repo and recorded, with their
+  commit, in ../reference/. Nothing here reads that repo at runtime or at build
+  time. Hard rule 1, and acceptance A36 is the check.
+
+  ⛔ FONTS ARE EMBEDDED, NOT FETCHED. The real app pulls Plus Jakarta Sans and
+  Spectral from Google Fonts. This file cannot: the deliverable is one HTML file
+  that opens by double-click and makes ZERO network requests (spec §3.2, A35).
+  The same typefaces ship as npm packages, so the woff2 files come in at build
+  time and Vite inlines them into the single file. Same faces, no network.
+
+  ⛔ woff2 ONLY, latin ONLY, and only the four weights the app uses. Fontsource's
+  own CSS also references .woff and every subset, which would inline roughly four
+  times the bytes for glyphs nothing here renders.
+*/
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url("@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 800;
+  font-display: block;
+  src: url("@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-800-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Spectral";
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url("@fontsource/spectral/files/spectral-latin-600-normal.woff2") format("woff2");
+}
+
+/*
+  ⛔ --color-ink-muted (#8E8579) FAILS AA for text under 24px. The Alloro repo's
+  own comment says so. Every muted text size this mockup renders is under 24px,
+  so the whole app uses --color-ink-muted-text-safe (#736B60) instead.
+  Design §5.2, Design §1.1.
+*/
+@theme {
+  --color-alloro-navy: #11151c;
+  --color-alloro-deepblue: #212d40;
+  --color-alloro-slateblue: #364156;
+  --color-alloro-orange: #d66853;
+  --color-alloro-orange-text-safe: #b8473a;
+  --color-alloro-teal: #06b6d4;
+  --color-alloro-sidebg: #212d40;
+  --color-alloro-sidehover: #11151c;
+  --color-alloro-bg: #faf8f3;
+  --color-alloro-surface: #ffffff;
+  --color-alloro-success: #22c55e;
+  --color-alloro-danger: #ef4444;
+
+  --color-ink-muted: #8e8579;
+  --color-ink-muted-text-safe: #736b60;
+  --color-accent-soft: #faf1ec;
+  --color-accent-soft-line: #efded4;
+
+  --color-cream: #fcfaed;
+  --color-cream-line: #ede5c0;
+  --color-line-soft: rgba(17, 21, 28, 0.06);
+  --color-line-medium: rgba(17, 21, 28, 0.1);
+  --color-success-soft: rgba(34, 197, 94, 0.1);
+  --color-danger-soft: rgba(239, 68, 68, 0.1);
+  --color-amber: #d9a441;
+  --color-amber-soft: rgba(217, 164, 65, 0.14);
+
+  --text-eyebrow: 12px;
+  --tracking-eyebrow: 0.05em;
+
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-display: "Spectral", Georgia, "Times New Roman", serif;
+}
+
+html {
+  font-size: 16px;
+}
+body {
+  margin: 0;
+  background: var(--color-alloro-bg);
+  color: var(--color-alloro-navy);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  box-sizing: border-box;
+}
+
+@layer components {
+  /* Design §1.5 — the one uppercase micro-label. */
+  .eyebrow {
+    font-size: var(--text-eyebrow);
+    line-height: 1.3;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--color-ink-muted-text-safe);
+  }
+  /* Design §1.1 — five sizes, fixed roles. */
+  .t-verdict {
+    font-size: 1.25rem;
+    line-height: 1.35;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .t-body {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  .t-meta {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-ink-muted-text-safe);
+  }
+  /* Design §1.6 — hero numbers and page titles are Spectral. */
+  .t-hero {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 1.1;
+    font-weight: 600;
+  }
+  /* Design §12.3 — every control clears 44px. */
+  .tap {
+    min-height: 44px;
+  }
+
+  /*
+    T39 (Rev 9) — ⛔ THE PARAGRAPH IS CAPPED, NOT THE PAGE.
+
+    Rev 8 protected line length by narrowing the whole page to 768px, which moved
+    every margin on every screen to solve a problem that lives inside one card:
+    the left margin read 32px on People and 168px everywhere else. This caps
+    running text where it actually is, so one 1280px column serves a seven-column
+    table AND a mail thread.
+
+    ⛔ AND IT IS SET IN `em`, NOT `ch`. The obvious spelling — 68ch, the upper
+    end of the 45–75 character band — RESOLVED TO 796px here and capped nothing:
+    the `ch` unit is the width of the "0" glyph, and Plus Jakarta Sans's zero is
+    0.73em, so 68ch is 50em, nearly double a readable line. A39d caught it by
+    measuring the rendered width instead of trusting the unit. 34em is the same
+    intent in a unit this typeface cannot inflate: 544px at 16px, 476px at 14px.
+  */
+  .measure {
+    max-width: 34em;
+  }
+
+  /*
+    The real app's surface, measured from origin/main: the dominant recipe across
+    frontend/src/components/dashboard is
+    `rounded-2xl border border-line-soft bg-alloro-surface p-6`, with
+    `shadow-premium` on the raised variants.
+  */
+  .shadow-premium {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  /*
+    T45 (Rev 9) — ⛔ THE CARD IS ALLORO'S OWN RECIPE, and Rev 8's was not.
+
+    frontend/src/components/dashboard/StatBox.tsx on origin/main:
+        rounded-[14px] border border-line-soft bg-white p-5 shadow-premium
+    and its own comment states the rule: "white card on linen, ink value,
+    terracotta = attention".
+
+    Rev 8's T32 made the BORDER heavier (line-medium) because line-soft was
+    invisible against the parchment background. Same symptom, wrong fix: Alloro
+    separates a card from the page with the SHADOW, which this stylesheet already
+    carried and was not using on cards. The heavier border is gone.
+  */
+  .card-radius {
+    border-radius: 14px;
+  }
+
+  /*
+    T49 (Rev 10) — Alloro's INSET tile, from
+    frontend/src/components/dashboard/patient-journey/PatientJourneyDetailMetricCard.tsx
+    at origin/main, recorded in ../reference/alloro-metric-tile-2026-09-24.md.
+
+    ⛔ It is the card INVERTED: parchment on white, where a card is white on
+    parchment. That inversion is what makes a group of numbers read as one thing
+    inside a card instead of as more cards.
+
+    ⛔ 12px, not the card's 14px. An inset sits inside something, so it is tighter.
+  */
+  .card-inset {
+    border-radius: 12px;
+    background: var(--color-alloro-bg);
+  }
+
+  /*
+    The nav row, copied from frontend/src/components/Sidebar.tsx.
+    ⛔ Alloro's own sidebar also carries a badge at text-[9px] font-black — both
+    banned by Design §1.2's 12px floor and §1.4's weight roster. Copied the row,
+    left the violation.
+  */
+  .nav-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.875rem 0.75rem;
+    text-align: left;
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    transition: background-color 150ms, color 150ms, border-color 150ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-row {
+      transition: none;
+    }
+  }
+  .nav-label {
+    font-size: 12px;
+    line-height: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  /* One visible focus ring everywhere, so the keyboard is never lost (Design §5.1). */
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-alloro-orange);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+}
+
+@keyframes skeleton {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+.skel {
+  background: var(--color-line-soft);
+  border-radius: 8px;
+  animation: skeleton 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel {
+    animation: none;
+  }
+}

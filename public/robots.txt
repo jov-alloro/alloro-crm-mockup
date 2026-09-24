@@ -1,0 +1,3 @@
+# This is an internal design mockup, not a product. Please do not index it.
+User-agent: *
+Disallow: /

@@ -1,0 +1,32 @@
+{
+  "name": "alloro-crm-v2",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Alloro CRM v2 mockup. Frontend only, no backend, no API calls, no real data. Internal and local.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/plus-jakarta-sans": "^5.3.0",
+    "@fontsource/spectral": "^5.3.0",
+    "@hugeicons/core-free-icons": "^4.3.5",
+    "@hugeicons/react": "^1.1.10",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "puppeteer-core": "^23.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "~5.7.2",
+    "vite": "^7.0.0",
+    "vite-plugin-singlefile": "^2.1.0"
+  }
+}
