@@ -58,6 +58,42 @@ export function CardRow({ card, n, inline, primary = true }: { card: CardModel; 
     }
   };
 
+  /**
+   * T95 (Rev 23) — ⛔ THE WHOLE CARD OPENS THE THING IT IS ABOUT.
+   *
+   * Jov: "make these cards be clickable so that I can easily view it." The card
+   * said "Rosa wrote 30 days ago and nobody has answered" and the only way to go
+   * and look was the button, which does something narrower — it starts a reply.
+   *
+   * ⛔ VIEWING AND ACTING ARE DIFFERENT DESTINATIONS, so the card has both. The
+   * body opens the message or the person; the button still does its one move. A
+   * "Call" card is where they visibly differ: the button lands on the person with
+   * the call sheet open, the body lands on the person.
+   */
+  const view = card.messageId ? `#/conversation/${card.messageId}` : `#/p/${p.c.id}`;
+
+  /**
+   * ⛔ NO role="button" AND NO tabIndex ON THE CARD, AND THAT IS DELIBERATE.
+   *
+   * People's rows are clickable that way, and it works there because a row holds
+   * no controls of its own. This card holds two buttons, and A69 exists precisely
+   * to stop a focusable control being nested inside a clickable row — the trap
+   * People hit and fixed. Making the card a button would break the rule this
+   * project wrote down two rounds ago.
+   *
+   * So the SENTENCE is the real control, reachable by keyboard and announced by a
+   * screen reader, and the card's click handler is a mouse convenience layered on
+   * top of it. Nothing here is reachable by mouse only.
+   *
+   * ⛔ AND IT IGNORES CLICKS THAT LANDED ON A CONTROL. Without this, pressing
+   * "Not now" would dismiss the card AND navigate away from the screen you were
+   * clearing it from — one press, two things, one of them unasked for.
+   */
+  const openIfBody = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, a[href], input, select, textarea")) return;
+    ui.go(view);
+  };
+
   return (
     <Card className={inline ? "border-amber" : ""}>
       {/* A card is identified by its person, not by a first name: the demo has
@@ -67,15 +103,27 @@ export function CardRow({ card, n, inline, primary = true }: { card: CardModel; 
         data-testid="card"
         data-card-id={card.id}
         data-person-id={p.c.id}
-        className="flex flex-wrap items-start justify-between gap-3"
+        onClick={openIfBody}
+        className="flex cursor-pointer flex-wrap items-start justify-between gap-3"
       >
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2">
             {n ? <span className="eyebrow" data-testid="card-number">{n}</span> : null}
             <Chip tone={card.kind === "came-back" ? "plain" : "amber"}>{card.chip}</Chip>
           </div>
-          {/* Design §6.1 — the sentence, before any number. */}
-          <p className="t-body font-semibold" data-testid="card-why">{card.why}</p>
+          {/* Design §6.1 — the sentence, before any number.
+              ⛔ T95: the sentence IS the keyboard path into the card. It carries no
+              button chrome and no icon on purpose — it is the card's own words,
+              not an action added beside them — so it also carries no data-btn,
+              which is what A40a's "every action button leads with an icon" governs. */}
+          <button
+            type="button"
+            data-testid="card-why"
+            onClick={() => ui.go(view)}
+            className="t-body block text-left font-semibold underline-offset-4 hover:underline"
+          >
+            {card.why}
+          </button>
           {/* Design §7.1 — money never appears without the sentence above it. */}
           {card.moneyLine ? <p className="t-meta mt-0.5">{card.moneyLine}</p> : null}
         </div>

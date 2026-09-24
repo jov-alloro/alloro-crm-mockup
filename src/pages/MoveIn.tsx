@@ -162,9 +162,14 @@ function Choose() {
         </Card>
       </div>
       {error ? <p className="t-meta mt-3" data-testid="choose-error">{error}</p> : null}
-      <div className="mt-4">
-        <Button icon="close" onClick={() => ui.go("#/people")}>Cancel</Button>
-      </div>
+      {/*
+        T96 (Rev 23) — ⛔ CANCEL IS GONE, BECAUSE IT WAS THE SECOND WAY OUT.
+        "Back to People" sits directly above this screen's own heading and goes to
+        the same place. Two controls, one destination, and the lower one dressed
+        as a decision — "Cancel" implies something is in progress that would be
+        thrown away, and on this screen nothing is: no file has been chosen yet.
+        The one that names where it goes is the one that stays.
+      */}
     </div>
   );
 }
