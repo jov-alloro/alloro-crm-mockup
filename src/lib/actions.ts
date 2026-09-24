@@ -243,6 +243,125 @@ export function addByHand(
   return { kind: "added", id: c.id };
 }
 
+/* \u2500\u2500 editing a profile (Rev 30) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+
+/**
+ * T119 (Rev 30) \u2014 \u26d4 UNDO AN ADD, WHICH EVERY OTHER DESTRUCTIVE ACTION ALREADY HAD.
+ *
+ * Hide, erase, merge and import can all be taken back. Adding a person could
+ * not \u2014 and adding is the action that starts every typo. Nothing else refers to
+ * a person in the second after they are created, so this removes them and the
+ * events that came with them, and nothing else has to be unpicked.
+ *
+ * \u26d4 IT REFUSES ONCE ANYTHING HAS HAPPENED TO THEM. A payment or a message can
+ * attach within the same session, and deleting a person who now owns events
+ * would leave those events pointing at nobody.
+ */
+export function undoAddByHand(w: World, contactId: string): boolean {
+  guardSave(w);
+  const c = w.contacts.find((x) => x.id === contactId);
+  if (!c) return false;
+  const theirs = w.events.filter((e) => e.contactId === contactId);
+  const onlyAddingEvents = theirs.every((e) => e.kind === "added" || e.kind === "note");
+  if (!onlyAddingEvents) return false;
+  w.events = w.events.filter((e) => e.contactId !== contactId);
+  w.contacts = w.contacts.filter((x) => x.id !== contactId);
+  return true;
+}
+
+export type EditPatch = { name?: string; email?: string; phone?: string; company?: string };
+export type EditResult =
+  | { kind: "saved"; changed: { field: string; from?: string; to?: string }[] }
+  | { kind: "clash"; field: "email" | "phone"; withId: string; withName: string }
+  | { kind: "gone" };
+
+/**
+ * T120 (Rev 30) \u2014 \u26d4 FOUR FIELDS, THREE RISK CLASSES, AND TREATING THEM AS ONE
+ * LIST IS THE MISTAKE.
+ *
+ *   name     \u2014 free. Nothing keys off it; the matcher never uses a name.
+ *   company  \u2014 free to type, but it MOVES the person between businesses, which
+ *              moves a business's money with them.
+ *   email,
+ *   phone    \u2014 \u26d4 THESE ARE THE IDENTITY KEYS. findMatch(w, email, phone) is how
+ *              Alloro decides two records are the same person. Writing one that
+ *              already belongs to somebody else either creates the duplicate the
+ *              matcher exists to prevent, or hands one person's key to another
+ *              record. So the edit is REFUSED and the merge is offered instead.
+ *
+ * \u26d4 AND WHAT IS NEVER EDITABLE IS ENFORCED BY THE SHAPE OF THIS FUNCTION, not
+ * by a comment: status, stage, first seen, the ledger, who added them and the
+ * source chips are computed from events and are not in EditPatch. If one of them
+ * is wrong, the EVENT is wrong, and the fix is a new event.
+ */
+export function editContact(w: World, contactId: string, patch: EditPatch, by: string): EditResult {
+  guardSave(w);
+  const c = w.contacts.find((x) => x.id === contactId && !x.erased && !x.mergedInto);
+  if (!c) return { kind: "gone" };
+
+  const clean = (v?: string) => {
+    const t = (v ?? "").trim();
+    return t.length ? t : undefined;
+  };
+  const nextEmail = clean(patch.email);
+  const nextPhone = clean(patch.phone);
+
+  /* \u26d4 The collision check runs BEFORE anything is written, and excludes this
+     record, or every save would clash with itself. */
+  for (const [field, value] of [["email", nextEmail], ["phone", nextPhone]] as const) {
+    if (!value) continue;
+    const before = field === "email" ? c.email : c.phone;
+    if ((before ?? "").toLowerCase() === value.toLowerCase()) continue;
+    const hit = findMatch(w, field === "email" ? value : undefined, field === "phone" ? value : undefined);
+    if (hit && hit.id !== c.id) {
+      return { kind: "clash", field, withId: hit.id, withName: hit.name };
+    }
+  }
+
+  /* \u26d4 Keep what the record arrived with, ONCE, before the first change. */
+  if (!c.arrived && (nextEmail !== c.email || nextPhone !== c.phone)) {
+    c.arrived = { email: c.email, phone: c.phone };
+  }
+
+  const changed: { field: string; from?: string; to?: string }[] = [];
+  const note = (field: string, from?: string, to?: string) => {
+    if ((from ?? "") === (to ?? "")) return;
+    changed.push({ field, from, to });
+  };
+
+  const nextName = clean(patch.name);
+  if (nextName) { note("name", c.name, nextName); c.name = nextName; }
+  note("email", c.email, nextEmail); c.email = nextEmail;
+  note("phone", c.phone, nextPhone); c.phone = nextPhone;
+
+  const company = clean(patch.company);
+  const wasBiz = c.businessId ? w.contacts.find((x) => x.id === c.businessId)?.name : undefined;
+  if ((company ?? "") !== (wasBiz ?? "")) {
+    if (!company) c.businessId = undefined;
+    else {
+      const biz = w.contacts.find((x) => x.kind === "business" && x.name.toLowerCase() === company.toLowerCase());
+      if (biz) c.businessId = biz.id;
+      else {
+        const made: Contact = { id: next(w, "b"), kind: "business", name: company, addedBy: by, consent: "unknown" };
+        w.contacts.push(made);
+        addEvent(w, { contactId: made.id, kind: "added", date: w.today, minute: 600, by, got: "by-hand" });
+        c.businessId = made.id;
+      }
+    }
+    note("company", wasBiz, company);
+  }
+
+  /* \u26d4 One history entry per edit, naming every field that moved. An edit ADDS
+     to the record; it never rewrites what was there. */
+  if (changed.length) {
+    addEvent(w, {
+      contactId: c.id, kind: "note", date: w.today, minute: 700, by,
+      text: `Changed ${changed.map((x) => `${x.field} from "${x.from ?? "nothing"}" to "${x.to ?? "nothing"}"`).join(", ")}.`,
+    });
+  }
+  return { kind: "saved", changed };
+}
+
 /* ── imports (spec S9–S12) ────────────────────────────────────────────────── */
 
 export interface ImportRow {

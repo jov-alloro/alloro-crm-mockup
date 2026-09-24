@@ -54,6 +54,19 @@ export interface Contact {
   hidden?: { on: string; by: string };
   /** Alloro staff's Erase. One-way (spec S7). */
   erased?: { on: string; by: string };
+  /**
+   * T118 (Rev 30) — ⛔ WHAT THE RECORD ARRIVED WITH, kept the first time somebody
+   * edits it.
+   *
+   * The profile says "How Alloro got them: Website form". That claim is the
+   * product. Edit the email and the record still says Website form while
+   * carrying an address nobody ever submitted — nothing on screen looks wrong,
+   * and the claim has quietly stopped being true. Events do not store the value
+   * they arrived with, so it is captured here on the FIRST edit: before that,
+   * the current value IS the arrival value, which is why no existing demo needs
+   * rebuilding for this.
+   */
+  arrived?: { email?: string; phone?: string };
   mergedInto?: string;
   notSameAs?: string[];
   /** Which import batch brought them in, for the 30-day undo. */

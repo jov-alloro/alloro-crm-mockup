@@ -460,7 +460,7 @@ export function Toast({ text, action, onAction }: { text: string; action?: strin
     >
       <span className="text-sm">{text}</span>
       {action ? (
-        <button type="button" onClick={onAction} className="pointer-events-auto text-sm font-semibold underline">
+        <button type="button" data-testid="toast-action" onClick={onAction} className="pointer-events-auto text-sm font-semibold underline">
           {action}
         </button>
       ) : null}

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { canSeeMoney } from "../lib/permissions";
+import { editContact, undoAddByHand } from "../lib/actions";
 import { useUi } from "../lib/ui-context";
 import {
   Button, Card, Chip, Combo, EmptyState, Field, PageSkeleton, Placeholder, Select, Sheet, Verdict,
@@ -32,7 +33,7 @@ import { cleanUp, diffWords, suggestReply } from "../lib/drafts";
  * every billing field is filled (spec R13, acceptance A10).
  */
 
-type SheetKind = null | "note" | "hide" | "erase" | "lost" | "call" | "remind" | "merge" | "email";
+type SheetKind = null | "note" | "hide" | "erase" | "lost" | "call" | "remind" | "merge" | "email" | "edit";
 
 export default function PersonPage({ id }: { id: string }) {
   const ui = useUi();
@@ -149,6 +150,10 @@ function PersonBody({ p }: { p: Profile }) {
             Email
           </Button>
           <Button icon="note" testId="person-note" onClick={() => setSheet("note")}>Add a note</Button>
+          {/* T120 (Rev 30) — ⛔ UNTIL NOW A TYPO WAS FOREVER. There was no edit
+              anywhere in the product: a wrong name could only be worked around by
+              erasing the person or adding a second one. */}
+          <Button icon="note" testId="person-edit" onClick={() => setSheet("edit")}>Edit details</Button>
         </div>
       ) : null}
 
@@ -307,6 +312,22 @@ function PersonBody({ p }: { p: Profile }) {
             <span className="t-body">How they found you</span>
             <span className="t-meta whitespace-nowrap">{FOUND_LABEL[p.found]}</span>
           </li>
+          {/*
+            T118 (Rev 30) — ⛔ WHAT THE SOURCE ACTUALLY GAVE, when it is no longer
+            what the record says. Without this line the profile keeps claiming
+            "Website form" while carrying an address nobody ever submitted —
+            nothing looks wrong and the claim has quietly stopped being true.
+            ⚠ An edit history is NOT this claim. It says what somebody typed; this
+            says what arrived.
+          */}
+          {p.c.arrived && (p.c.arrived.email !== p.c.email || p.c.arrived.phone !== p.c.phone) ? (
+            <li className="pt-1.5" data-testid="source-arrived">
+              <span className="t-meta">
+                What they first gave you:{" "}
+                {p.c.arrived.email || p.c.arrived.phone || "no email or phone"}. You changed it since.
+              </span>
+            </li>
+          ) : null}
         </ul>
       </Card>
 
@@ -382,6 +403,7 @@ function PersonBody({ p }: { p: Profile }) {
 
       {sheet === "email" ? <EmailSheet p={p} onClose={() => setSheet(null)} /> : null}
       {sheet === "note" ? <NoteSheet p={p} onClose={() => setSheet(null)} /> : null}
+      {sheet === "edit" ? <EditSheet p={p} onClose={() => setSheet(null)} /> : null}
       {sheet === "hide" ? <HideSheet p={p} onClose={() => setSheet(null)} /> : null}
       {sheet === "erase" ? <EraseSheet p={p} onClose={() => setSheet(null)} /> : null}
       {sheet === "lost" ? <LostSheet p={p} onClose={() => setSheet(null)} /> : null}
@@ -713,6 +735,66 @@ function BusinessBody({ p }: { p: Profile }) {
 
 /* ── the sheets ───────────────────────────────────────────────────────────── */
 
+/**
+ * T120 (Rev 30) — ⛔ FOUR FIELDS, THREE RISK CLASSES, AND THE SCREEN SAYS SO.
+ *
+ * Name and company are free to type. Email and phone are the keys Alloro uses to
+ * decide two records are the same person, so a value that already belongs to
+ * somebody else is REFUSED and the merge is offered instead — named, so the
+ * owner knows who they just collided with.
+ *
+ * ⛔ WHAT IS NOT ON THIS SHEET IS THE POINT OF IT. Status, stage, first seen, the
+ * payment ledger, who added them and the source chips are computed from events.
+ * If one of those is wrong the EVENT is wrong, and the fix is a new event, not a
+ * typed override. That boundary is in CONTEXT.md as a settled decision, and the
+ * shape of EditPatch is what enforces it.
+ */
+function EditSheet({ p, onClose }: { p: Profile; onClose: () => void }) {
+  const ui = useUi();
+  const [name, setName] = useState(p.c.name);
+  const [email, setEmail] = useState(p.c.email ?? "");
+  const [phone, setPhone] = useState(p.c.phone ?? "");
+  const biz = p.c.businessId ? ui.model.byId.get(p.c.businessId) : undefined;
+  const [company, setCompany] = useState(biz?.c.name ?? "");
+  const [clash, setClash] = useState<string | null>(null);
+
+  const save = () => {
+    setClash(null);
+    const res = ui.act((w) => editContact(w, p.c.id, { name, email, phone, company }, ui.actor));
+    if (!res) { setClash("Couldn't save that. Nothing changed. Try again."); return; }
+    if (res.kind === "gone") { setClash("This person isn't here any more."); return; }
+    if (res.kind === "clash") {
+      setClash(`That ${res.field} belongs to ${res.withName}. Are these the same person? Open them and use "Same person" instead.`);
+      return;
+    }
+    ui.toast(res.changed.length ? "Saved." : "Nothing changed.");
+    onClose();
+  };
+
+  return (
+    <Sheet title="Edit details" onClose={onClose}>
+      <Field label="Name" value={name} onChange={setName} testId="edit-name" />
+      <Field label="Email" value={email} onChange={setEmail} testId="edit-email"
+        hint="Alloro uses this to know when a message is from them." />
+      <Field label="Phone" value={phone} onChange={setPhone} testId="edit-phone"
+        hint="Used the same way as the email, when there is no email." />
+      <Field label="Company" value={company} onChange={setCompany} testId="edit-company"
+        hint="Moving them moves their money to that company's page too." />
+      {clash ? <p className="t-meta mb-3" data-testid="edit-clash">{clash}</p> : null}
+      {/* ⛔ The fields NOT here are the ones Alloro works out. Said on the screen,
+          not only in the code, so nobody has to guess why. */}
+      <p className="t-meta mb-3">
+        Alloro works out their status, their stage and when you first saw them from what has
+        happened. Those are not typed, so they are not here.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button primary icon="tick" testId="edit-save" onClick={save}>Save</Button>
+        <Button icon="close" onClick={onClose}>Cancel</Button>
+      </div>
+    </Sheet>
+  );
+}
+
 function NoteSheet({ p, onClose }: { p: Profile; onClose: () => void }) {
   const ui = useUi();
   const [text, setText] = useState("");
@@ -949,7 +1031,19 @@ export function AddByHand({ onClose }: { onClose?: () => void }) {
     if (!res) { setErr("Couldn't save. Try again."); return; }
     if (res.kind === "erased-before") { setErr("This email was erased at someone's request, so Alloro won't add it again."); return; }
     if (res.kind === "already-here") { ui.toast("Already here, so Alloro opened their page instead of making a copy."); ui.go(`#/p/${res.id}`); return; }
-    ui.toast("Added."); ui.go(`#/p/${res.id}`);
+    /* T119 (Rev 30) — ⛔ THE UNDO EVERY OTHER DESTRUCTIVE ACTION ALREADY HAD.
+       Hide, erase, merge and import can all be taken back; adding somebody could
+       not, and adding is where a typo starts. */
+    const added: string = res.id!;
+    ui.toast("Added.", {
+      label: "Undo",
+      onClick: () => {
+        const ok = ui.act((w) => undoAddByHand(w, added));
+        if (ok) { ui.toast("Undone. Nothing was added."); ui.go("#/people"); }
+        else ui.toast("Too late to undo — something has happened to them already.");
+      },
+    });
+    ui.go(`#/p/${res.id}`);
   };
 
   return (
