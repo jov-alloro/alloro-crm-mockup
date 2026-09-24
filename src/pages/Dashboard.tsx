@@ -111,7 +111,22 @@ export default function Dashboard() {
           {/* Design §6.1 — the verdict first. This card had none at all: an
               eyebrow label and five numbers, stating data and saying nothing. */}
           <p className="t-body measure font-semibold" data-testid="found-verdict">{charts.found.sentence}</p>
-          <TileGrid title="Who came from where" points={charts.found.known} go={ui.go} />
+          {/*
+            T104 (Rev 26) — ⛔ A DONUT, AND THIS REVERSES T50's ANSWER FOR THIS CARD.
+            Jov asked for it three times. I argued against it twice and the
+            arguments have not changed: four shares within 35% of each other is
+            the case a ring reads worst, which is exactly what T50's rule was
+            written to catch. ⛔ THE RULE IS NOT DELETED AND NOT QUIETLY IGNORED —
+            Rev 26 records that it was overruled by the person who owns the
+            product, which is a different thing from being wrong.
+
+            What was kept from T97, because it survives the change of shape: the
+            sentence above, the share on every entry, and the line below naming
+            the absence in words. The one thing that changed is that the absence
+            is now IN the ring, because a donut claims to be a whole and leaving
+            a fifth of the people out would be a worse lie than the one T97 fixed.
+          */}
+          <Ring title="Who came from where" points={charts.found.ring} go={ui.go} big />
           {/*
             ⛔ THE ABSENCE GETS ITS OWN LINE, BELOW THE SOURCES, NOT A RANK AMONG
             THEM. It is a fact about the records rather than a way anybody arrived,

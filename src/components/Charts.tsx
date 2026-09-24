@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { chartSummary, type Point } from "../lib/charts";
 
@@ -255,10 +256,34 @@ export function MonthBars({ title, points }: { title: string; points: Point[] })
 }
 
 /** A ring split into parts, with a key beside it. Each part is a control. */
-export function Ring({ title, points, go, big }: { title: string; points: Point[]; go?: (href: string) => void; big?: boolean }) {
+/**
+ * T104 (Rev 26) — ⛔ THE DONUT LIGHTS UP, AND IT DOES IT ON FOCUS TOO.
+ *
+ * Jov asked twice for a donut on "Who came from where" with a highlight on
+ * hover. I argued against it twice: four shares within 35% of each other is the
+ * case a ring reads worst, and T50's rule points at tiles. He asked again, so it
+ * is built — and the objections are kept in the spec rather than dropped,
+ * because "he asked twice" is a reason to build it, not a reason to pretend the
+ * reasoning changed.
+ *
+ * ⛔ HOVER ALONE WOULD HAVE BEEN HALF A FEATURE. There is no hover on a phone,
+ * and this dashboard is checked at 375px. So the highlight is driven by hover
+ * AND by keyboard focus, and — the part that actually matters — every label,
+ * count and share is in the legend at all times. Nothing is only discoverable by
+ * pointing at it.
+ */
+export function Ring({
+  title, points, go, big,
+}: { title: string; points: Point[]; go?: (href: string) => void; big?: boolean }) {
+  const [hot, setHot] = useState<number | null>(null);
   const total = points.reduce((s, p) => s + p.value, 0) || 1;
   const shades = ["stroke-alloro-navy", "stroke-alloro-navy/55", "stroke-alloro-navy/25", "stroke-alloro-navy/12"];
   const swatches = ["bg-alloro-navy", "bg-alloro-navy/55", "bg-alloro-navy/25", "bg-alloro-navy/12"];
+  const strokeOf = (p: Point, i: number) =>
+    p.muted ? "stroke-line-medium" : p.needsYou ? "stroke-alloro-orange" : shades[i % shades.length];
+  const swatchOf = (p: Point, i: number) =>
+    p.muted ? "bg-line-medium" : p.needsYou ? "bg-alloro-orange" : swatches[i % swatches.length];
+
   let start = 0;
   return (
     <Figure title={title} points={points} className="flex flex-wrap items-center gap-4 sm:gap-5">
@@ -266,10 +291,22 @@ export function Ring({ title, points, go, big }: { title: string; points: Point[
         <circle cx="21" cy="21" r="15.915" fill="none" strokeWidth="6" className="stroke-line-soft" />
         {points.map((p, i) => {
           const pct = (p.value / total) * 100;
+          const lit = hot === i;
+          const dim = hot !== null && !lit;
           const seg = (
-            <circle key={p.label} cx="21" cy="21" r="15.915" fill="none" strokeWidth="6"
-              strokeDasharray={`${pct} ${100 - pct}`} strokeDashoffset={-start}
-              className={p.needsYou ? "stroke-alloro-orange" : shades[i % shades.length]} />
+            <circle
+              key={p.label}
+              cx="21" cy="21" r="15.915" fill="none"
+              /* ⛔ The lit slice thickens OUTWARD from the same centre line, so the
+                 ring never changes size and nothing beside it moves. */
+              strokeWidth={lit ? 7.6 : 6}
+              strokeDasharray={`${pct} ${100 - pct}`}
+              strokeDashoffset={-start}
+              opacity={dim ? 0.3 : 1}
+              onMouseEnter={() => setHot(i)}
+              onMouseLeave={() => setHot(null)}
+              className={`${strokeOf(p, i)} transition-all duration-150 motion-reduce:transition-none`}
+            />
           );
           start += pct;
           return seg;
@@ -277,37 +314,51 @@ export function Ring({ title, points, go, big }: { title: string; points: Point[
       </svg>
       <ul className="flex min-w-0 flex-1 flex-col gap-0.5">
         {points.map((p, i) => {
+          const lit = hot === i;
           const body = (
             <>
               <span
-                className={`h-2.5 w-2.5 shrink-0 rounded-full ${p.needsYou ? "bg-alloro-orange" : swatches[i % swatches.length]}`}
+                className={`h-2.5 w-2.5 shrink-0 rounded-full ${swatchOf(p, i)}`}
                 aria-hidden="true"
               />
               <span className="truncate text-left">
                 <span className={`font-semibold tabular-nums ${p.needsYou ? "text-alloro-orange-text-safe" : "text-alloro-navy"}`}>
                   {p.display ?? p.value}
                 </span> {p.label.toLowerCase()}
+                {/* ⛔ THE SHARE IS ALWAYS HERE, not revealed by pointing. A count with
+                    no denominator makes the reader do the arithmetic, and a phone
+                    cannot hover to be told. */}
+                {p.sub ? <span className="tabular-nums text-ink-muted-text-safe"> · {p.sub}</span> : null}
               </span>
             </>
           );
+          const hover = {
+            onMouseEnter: () => setHot(i),
+            onMouseLeave: () => setHot(null),
+            onFocus: () => setHot(i),
+            onBlur: () => setHot(null),
+          };
           return p.href && go ? (
             <li key={p.label}>
               <button
                 type="button"
                 data-testid="chart-point"
                 data-href={p.href}
+                data-lit={lit ? "true" : undefined}
                 aria-label={`${p.label}: ${p.display ?? p.value}. Open these people.`}
                 onClick={() => go(p.href!)}
-                className="t-meta -mx-2 flex min-h-11 w-full items-center gap-2 rounded-xl px-2 transition-colors hover:bg-alloro-bg focus-visible:bg-alloro-bg"
+                {...hover}
+                className={`t-meta -mx-2 flex min-h-11 w-full items-center gap-2 rounded-xl px-2 transition-colors hover:bg-alloro-bg focus-visible:bg-alloro-bg ${lit ? "bg-alloro-bg" : ""}`}
               >
                 {body}
               </button>
             </li>
           ) : (
-            <li key={p.label} className="t-meta -mx-2 flex min-h-11 items-center gap-2 px-2">{body}</li>
+            <li key={p.label} className="t-meta -mx-2 flex min-h-11 items-center gap-2 px-2" {...hover}>{body}</li>
           );
         })}
       </ul>
     </Figure>
   );
 }
+

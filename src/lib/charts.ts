@@ -32,6 +32,12 @@ export interface Point {
    * the list is 151 long.
    */
   sub?: string;
+  /**
+   * T104 (Rev 26) — a slice that is not a category but the absence of one.
+   * Drawn in the track's own grey so it reads as "unfilled" rather than as a
+   * fifth channel competing with Google.
+   */
+  muted?: boolean;
   /** Where this number's people live. T36 — every number names its people. */
   href?: string;
   /**
@@ -84,6 +90,8 @@ export function byFound(m: Model): Point[] {
  */
 export function foundStory(m: Model, customers: string): {
   known: Point[];
+  /** T104 — every slice including the absence, for the donut. */
+  ring: Point[];
   unknown: { n: number; href: string; share: number } | null;
   total: number;
   sentence: string;
@@ -107,8 +115,27 @@ export function foundStory(m: Model, customers: string): {
         ? `About a third found you the same way: ${top.label} — ${top.value} of ${total}.`
         : `No one way stands out. The biggest is ${top.label}, at ${top.value} of ${total} ${customers}.`;
 
+  /**
+   * T104 (Rev 26) — ⛔ THE DONUT CARRIES THE ABSENCE, AND THAT REVERSES T97.
+   *
+   * T97 took "Not known" OUT of the ranking, and the reasoning still holds for a
+   * list: ranking an absence third among channels reads as "29 people found us
+   * via not-known", which nobody did. ⛔ BUT A DONUT MAKES A DIFFERENT CLAIM — it
+   * says "these are the parts of a whole". Leaving a fifth of the people out
+   * would make the ring lie about its own shape, and that is a worse lie than
+   * the one T97 fixed.
+   *
+   * So it is in, LAST and in the track's own grey, reading as the part of the
+   * circle nobody has filled in yet. The sentence above and the line below still
+   * treat it as what it is.
+   */
+  const ring = missing
+    ? [...known, { ...missing, sub: `${pct(missing.value)}%`, muted: true }]
+    : known;
+
   return {
     known,
+    ring,
     unknown: missing ? { n: missing.value, href: missing.href!, share: pct(missing.value) } : null,
     total,
     sentence,
