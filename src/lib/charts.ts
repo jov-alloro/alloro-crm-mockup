@@ -166,10 +166,11 @@ export function wroteInSplit(m: Model): Point[] {
   const wrote = m.visible.filter((p) => p.got.includes("form"));
   const paid = wrote.filter((p) => p.buys.length > 0).length;
   const not = wrote.length - paid;
+  const share = (n: number) => (wrote.length ? `${Math.round((n / wrote.length) * 100)}%` : undefined);
   return [
-    { label: "Paid", value: paid, display: String(paid), href: "#/people/f/got/form" },
+    { label: "Paid", value: paid, display: String(paid), sub: share(paid), href: "#/people/f/got/form" },
     // ⛔ The gap is the point of this chart, so the gap is the terracotta.
-    { label: "Not yet", value: not, display: String(not), href: "#/people/f/unpaid", needsYou: true },
+    { label: "Not yet", value: not, display: String(not), sub: share(not), href: "#/people/f/unpaid", needsYou: true },
   ].filter((x) => x.value > 0);
 }
 

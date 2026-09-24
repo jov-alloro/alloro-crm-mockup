@@ -126,130 +126,29 @@ export function TileGrid({
  * is then in real pixels and nothing scales it, which is the whole fix.
  */
 /**
- * T106 (Rev 27) — ⛔ TWO PILLARS, WHICH IS A DIFFERENT CLAIM FROM ONE STACKED BAR.
+ * T109 (Rev 28) — ⛔ ROWS, AND WHY THEY BEAT PILLARS FOR A COMPARISON.
  *
- * Jov: "on the bar chart on the right, use 2 pillars side by side." Built, and
- * the trade is worth naming rather than hiding: a stacked bar says "these are
- * two parts of ONE whole" — which is exactly what the headline above it says,
- * "67 of 110". Two pillars say "here are two quantities, compare them". The
- * card keeps its headline, so the whole is still stated in words; the pillars
- * now carry the comparison, which is the half a reader actually acts on.
+ * Jov: "is there another way to display this, like a comparison of two
+ * categories?" There is, and it is the oldest chart in this file.
  *
- * ⛔ T50's RULE STILL SAYS YES. A bar when the SPREAD carries the meaning: 67
- * against 43 is the finding, because forty-three people wrote in and never paid.
+ * ⛔ LENGTH FROM A SHARED LEFT EDGE IS THE EASIEST COMPARISON THERE IS. Two
+ * vertical pillars ask the eye to compare heights that start at different places
+ * on the page and carry their labels sideways underneath. Two rows start at the
+ * same edge, run the same direction as the reading, and put the words where
+ * words go. It is also what "What sells" already uses, so the dashboard loses a
+ * shape instead of gaining one.
  *
- * ⛔ NO STRETCHED RADIUS. Plain HTML, percentage heights inside a fixed-height
- * row, rounded-t on each pillar. A49 exists because a rounded shape scaled
- * inside an SVG viewBox turned a 4px corner into a 30px ellipse; nothing here
- * is scaled.
+ * ⚠ SAID PLAINLY: this card has now been a ring, a stacked bar, two pillars and
+ * two rows. Three of those looked fine. What makes the card work is the headline
+ * "67 of 110" and the next step "See the 43 who haven't", and neither has
+ * changed once. The chart under them is the smallest part of it.
+ *
+ * ⛔ AND THE ROWS OPEN THEIR PEOPLE NOW. Every other chart here does (T36: every
+ * number names its people, A43b checks it); this one was the last that did not.
  */
-export function Pillars({
+export function SpreadBars({
   title, points, go,
 }: { title: string; points: Point[]; go?: (href: string) => void }) {
-  const max = Math.max(1, ...points.map((p) => p.value));
-  return (
-    <Figure title={title} points={points} className="flex flex-1 flex-col justify-end">
-      <div className="flex h-36 items-end gap-4">
-        {points.map((pt) => {
-          const h = Math.max(4, Math.round((pt.value / max) * 100));
-          const body = (
-            <span className="flex h-full w-full flex-col justify-end gap-1.5">
-              <span className={`text-[17px] font-extrabold leading-none tabular-nums ${pt.needsYou ? "text-alloro-orange-text-safe" : "text-alloro-navy"}`}>
-                {pt.display ?? pt.value}
-              </span>
-              <span
-                aria-hidden="true"
-                style={{ height: `${h}%` }}
-                className={`w-full rounded-t-lg ${pt.needsYou ? "bg-alloro-orange" : "bg-alloro-navy"}`}
-              />
-              <span className="t-meta leading-tight">{pt.label.toLowerCase()}</span>
-            </span>
-          );
-          return pt.href && go ? (
-            <button
-              key={pt.label}
-              type="button"
-              data-testid="chart-point"
-              data-href={pt.href}
-              aria-label={`${pt.label}: ${pt.display ?? pt.value}. Open these people.`}
-              onClick={() => go(pt.href!)}
-              className="flex h-full flex-1 rounded-xl px-1 text-left transition-colors hover:bg-alloro-bg focus-visible:bg-alloro-bg"
-            >
-              {body}
-            </button>
-          ) : (
-            <span key={pt.label} className="flex h-full flex-1 px-1">{body}</span>
-          );
-        })}
-      </div>
-    </Figure>
-  );
-}
-
-/**
- * T101 (Rev 25) — ⛔ TWO PARTS OF ONE WHOLE, AS ONE BAR.
- *
- * ⛔ T50's RULE ALLOWS THIS, AND I CHECKED RATHER THAN ASSUMED. The rule reads:
- * a bar when the SPREAD carries the meaning, a tile when the NUMBER does. This
- * is 67 against 43 — 61% and 39% — and the gap IS the finding, because the
- * whole point of the card is that forty-three people wrote in and never paid.
- * That is the same test that REFUSED bars on the card beside it, where four
- * shares sat within 35% of each other. The rule said yes here and no there,
- * which is what a rule is for.
- *
- * ⛔ THE RADIUS LIVES ON THE TRACK, NOT ON THE SEGMENTS. A49 exists because a
- * rounded shape scaled inside an SVG viewBox turned a 4px corner into a 30px
- * ellipse. The track is a plain HTML element with overflow-hidden and
- * rounded-full; the segments are rectangles clipped by it, so nothing is
- * stretched and there is no radius to distort.
- *
- * ⛔ TERRACOTTA IS THE SECOND SEGMENT BECAUSE IT IS THE ONE THAT NEEDS SOMEBODY
- * (A47, Design §2.2 — attention, never decoration). The data already says so:
- * "Not yet" carries needsYou, set where the numbers are built rather than here.
- */
-export function SplitBar({
-  title, points, go,
-}: { title: string; points: Point[]; go?: (href: string) => void }) {
-  const total = Math.max(1, points.reduce((n, p) => n + p.value, 0));
-  return (
-    <Figure title={title} points={points} className="flex flex-col gap-3">
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-line-medium" aria-hidden="true">
-        {points.map((pt) => (
-          <div
-            key={pt.label}
-            className={pt.needsYou ? "bg-alloro-orange" : "bg-alloro-navy"}
-            style={{ width: `${Math.round((pt.value / total) * 100)}%` }}
-          />
-        ))}
-      </div>
-      <dl className="flex flex-wrap gap-x-5 gap-y-1">
-        {points.map((pt) => {
-          const body = (
-            <span className="inline-flex items-baseline gap-1.5">
-              <span
-                aria-hidden="true"
-                className={`inline-block h-2 w-2 shrink-0 translate-y-[-1px] rounded-full ${pt.needsYou ? "bg-alloro-orange" : "bg-alloro-navy"}`}
-              />
-              <dd className="text-[15px] font-extrabold tabular-nums text-alloro-navy">{pt.display ?? pt.value}</dd>
-              <dt className="t-meta">{pt.label.toLowerCase()}</dt>
-            </span>
-          );
-          return pt.href && go ? (
-            <button key={pt.label} type="button" onClick={() => go(pt.href!)} data-testid="chart-point"
-              data-href={pt.href} aria-label={`${pt.label}: ${pt.display ?? pt.value}`}
-              className="underline-offset-4 hover:underline">
-              {body}
-            </button>
-          ) : (
-            <span key={pt.label}>{body}</span>
-          );
-        })}
-      </dl>
-    </Figure>
-  );
-}
-
-export function SpreadBars({ title, points }: { title: string; points: Point[] }) {
   const max = Math.max(1, ...points.map((p) => p.value));
   return (
     <Figure title={title} points={points} className="flex flex-col gap-3">
@@ -257,17 +156,30 @@ export function SpreadBars({ title, points }: { title: string; points: Point[] }
         const pct = pt.value === 0 ? 0 : Math.max(2, Math.round((pt.value / max) * 100));
         const fill = pt.needsYou
           ? "bg-alloro-orange"
-          : ["bg-alloro-navy", "bg-alloro-navy/75", "bg-alloro-navy/55", "bg-alloro-navy/40", "bg-alloro-navy/30"][Math.min(i, 4)];
-        return (
-          <div key={pt.label}>
+          : ["bg-alloro-navy", "bg-alloro-deepblue", "bg-alloro-slateblue", "bg-ink-muted", "bg-alloro-navy/30"][Math.min(i, 4)];
+        const body = (
+          <>
             <div className="flex items-baseline justify-between gap-3">
               <span className="t-meta truncate text-alloro-navy">{pt.label}</span>
-              <span className="t-meta shrink-0 font-bold tabular-nums text-alloro-navy">{pt.display ?? pt.value}</span>
+              <span className="t-meta shrink-0 tabular-nums">
+                <span className="font-bold text-alloro-navy">{pt.display ?? pt.value}</span>
+                {pt.sub ? <span className="text-ink-muted-text-safe"> · {pt.sub}</span> : null}
+              </span>
             </div>
             <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-line-medium" aria-hidden="true">
-              <div className={`h-full rounded-full ${fill}`} style={{ width: `${pct}%` }} />
+              <div className={`h-full rounded-full ${fill}`} data-bar={pt.value} style={{ width: `${pct}%` }} />
             </div>
-          </div>
+          </>
+        );
+        return pt.href && go ? (
+          <button key={pt.label} type="button" data-testid="chart-point" data-href={pt.href}
+            aria-label={`${pt.label}: ${pt.display ?? pt.value}. Open these people.`}
+            onClick={() => go(pt.href!)}
+            className="-mx-2 rounded-xl px-2 py-1 text-left transition-colors hover:bg-alloro-bg focus-visible:bg-alloro-bg">
+            {body}
+          </button>
+        ) : (
+          <div key={pt.label}>{body}</div>
         );
       })}
     </Figure>
@@ -366,13 +278,13 @@ export function Ring({
 
   let start = 0;
   return (
-    <Figure title={title} points={points} className="flex flex-wrap items-center gap-4 sm:gap-5">
+    <Figure title={title} points={points} className="flex flex-wrap items-center gap-5 sm:gap-8">
       {/* T105 — ⛔ BIGGER WHEN THE CARD HAS THE ROOM. Jov: "maximize its space, so
           it's elegant to look at." The ring sat at 128px inside a two-column card
           with a pool of linen beside it. The viewBox is square, so growing it
           scales nothing unevenly — A49's stretched-radius trap needs a
           non-square viewBox and this has never had one. */}
-      <svg className={`block shrink-0 -rotate-90 ${big ? "h-44 w-44 sm:h-52 sm:w-52" : "h-24 w-24"}`} viewBox="0 0 42 42" aria-hidden="true">
+      <svg className={`block shrink-0 -rotate-90 ${big ? "h-44 w-44 sm:ml-3 sm:h-52 sm:w-52" : "h-24 w-24"}`} viewBox="0 0 42 42" aria-hidden="true">
         <circle cx="21" cy="21" r="15.915" fill="none" strokeWidth="6" className="stroke-line-soft" />
         {points.map((p, i) => {
           const pct = (p.value / total) * 100;
@@ -406,14 +318,26 @@ export function Ring({
                 className={`h-2.5 w-2.5 shrink-0 rounded-full ${swatchOf(p, i)}`}
                 aria-hidden="true"
               />
-              <span className="truncate text-left">
-                <span className={`font-semibold tabular-nums ${p.needsYou ? "text-alloro-orange-text-safe" : "text-alloro-navy"}`}>
-                  {p.display ?? p.value}
-                </span> {p.label.toLowerCase()}
-                {/* ⛔ THE SHARE IS ALWAYS HERE, not revealed by pointing. A count with
-                    no denominator makes the reader do the arithmetic, and a phone
-                    cannot hover to be told. */}
-                {p.sub ? <span className="tabular-nums text-ink-muted-text-safe"> · {p.sub}</span> : null}
+              {/*
+                T108 (Rev 28) — ⛔ THE KEY SPREADS ACROSS THE CARD INSTEAD OF HUGGING
+                THE RING. Jov: "it has too much white space in here, make use of
+                its space." The legend was a narrow column beside the donut with
+                a third of the card empty to its right. Pushing the number and
+                the share to the FAR EDGE fills the row and gives the reader a
+                straight column of figures to compare, which a ragged-right list
+                never does. The label stays left, where the eye starts.
+              */}
+              <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3 text-left">
+                <span className="truncate">{p.label.toLowerCase()}</span>
+                <span className="shrink-0 tabular-nums">
+                  <span className={`font-semibold ${p.needsYou ? "text-alloro-orange-text-safe" : "text-alloro-navy"}`}>
+                    {p.display ?? p.value}
+                  </span>
+                  {/* ⛔ THE SHARE IS ALWAYS HERE, not revealed by pointing. A count
+                      with no denominator makes the reader do the arithmetic, and a
+                      phone cannot hover to be told. */}
+                  {p.sub ? <span className="text-ink-muted-text-safe"> · {p.sub}</span> : null}
+                </span>
               </span>
             </>
           );
