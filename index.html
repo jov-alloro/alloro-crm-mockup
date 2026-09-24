@@ -8,6 +8,10 @@
          this from a subpath where robots.txt at the domain root does not
          apply and no header can be set. This meta tag works on both hosts. -->
     <meta name="robots" content="noindex, nofollow, noarchive" />
+    <!-- Which build the hosted copy is serving. Bumped on purpose to prove a
+         push redeploys; it is the one thing on the page a person cannot see
+         but curl can read. -->
+    <meta name="build" content="2026-09-24-b" />
     <title>Customers — Alloro</title>
   </head>
   <body>
