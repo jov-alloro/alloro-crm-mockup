@@ -126,6 +126,67 @@ export function TileGrid({
  * is then in real pixels and nothing scales it, which is the whole fix.
  */
 /**
+ * T106 (Rev 27) — ⛔ TWO PILLARS, WHICH IS A DIFFERENT CLAIM FROM ONE STACKED BAR.
+ *
+ * Jov: "on the bar chart on the right, use 2 pillars side by side." Built, and
+ * the trade is worth naming rather than hiding: a stacked bar says "these are
+ * two parts of ONE whole" — which is exactly what the headline above it says,
+ * "67 of 110". Two pillars say "here are two quantities, compare them". The
+ * card keeps its headline, so the whole is still stated in words; the pillars
+ * now carry the comparison, which is the half a reader actually acts on.
+ *
+ * ⛔ T50's RULE STILL SAYS YES. A bar when the SPREAD carries the meaning: 67
+ * against 43 is the finding, because forty-three people wrote in and never paid.
+ *
+ * ⛔ NO STRETCHED RADIUS. Plain HTML, percentage heights inside a fixed-height
+ * row, rounded-t on each pillar. A49 exists because a rounded shape scaled
+ * inside an SVG viewBox turned a 4px corner into a 30px ellipse; nothing here
+ * is scaled.
+ */
+export function Pillars({
+  title, points, go,
+}: { title: string; points: Point[]; go?: (href: string) => void }) {
+  const max = Math.max(1, ...points.map((p) => p.value));
+  return (
+    <Figure title={title} points={points} className="flex flex-1 flex-col justify-end">
+      <div className="flex h-36 items-end gap-4">
+        {points.map((pt) => {
+          const h = Math.max(4, Math.round((pt.value / max) * 100));
+          const body = (
+            <span className="flex h-full w-full flex-col justify-end gap-1.5">
+              <span className={`text-[17px] font-extrabold leading-none tabular-nums ${pt.needsYou ? "text-alloro-orange-text-safe" : "text-alloro-navy"}`}>
+                {pt.display ?? pt.value}
+              </span>
+              <span
+                aria-hidden="true"
+                style={{ height: `${h}%` }}
+                className={`w-full rounded-t-lg ${pt.needsYou ? "bg-alloro-orange" : "bg-alloro-navy"}`}
+              />
+              <span className="t-meta leading-tight">{pt.label.toLowerCase()}</span>
+            </span>
+          );
+          return pt.href && go ? (
+            <button
+              key={pt.label}
+              type="button"
+              data-testid="chart-point"
+              data-href={pt.href}
+              aria-label={`${pt.label}: ${pt.display ?? pt.value}. Open these people.`}
+              onClick={() => go(pt.href!)}
+              className="flex h-full flex-1 rounded-xl px-1 text-left transition-colors hover:bg-alloro-bg focus-visible:bg-alloro-bg"
+            >
+              {body}
+            </button>
+          ) : (
+            <span key={pt.label} className="flex h-full flex-1 px-1">{body}</span>
+          );
+        })}
+      </div>
+    </Figure>
+  );
+}
+
+/**
  * T101 (Rev 25) — ⛔ TWO PARTS OF ONE WHOLE, AS ONE BAR.
  *
  * ⛔ T50's RULE ALLOWS THIS, AND I CHECKED RATHER THAN ASSUMED. The rule reads:
@@ -277,8 +338,27 @@ export function Ring({
 }: { title: string; points: Point[]; go?: (href: string) => void; big?: boolean }) {
   const [hot, setHot] = useState<number | null>(null);
   const total = points.reduce((s, p) => s + p.value, 0) || 1;
-  const shades = ["stroke-alloro-navy", "stroke-alloro-navy/55", "stroke-alloro-navy/25", "stroke-alloro-navy/12"];
-  const swatches = ["bg-alloro-navy", "bg-alloro-navy/55", "bg-alloro-navy/25", "bg-alloro-navy/12"];
+  /**
+   * T105 (Rev 27) — ⛔ ALLORO'S OWN COLOURS, NOT ONE COLOUR AT FOUR OPACITIES.
+   *
+   * Jov: "on the donut use the Alloro colors." He was looking at four steps of
+   * navy at 100/55/25/12%, which on white renders as black and three greys. It
+   * is technically the brand colour and it reads as a greyscale chart.
+   *
+   * These are four real tokens from the palette, dark to light:
+   *   alloro-navy #11151c · alloro-deepblue #212d40 · alloro-slateblue #364156
+   *   · ink-muted #8e8579, the WARM grey the rest of the app uses for quiet text.
+   * They stay legible against each other and against the linen background.
+   *
+   * ⛔ TERRACOTTA IS NOT IN THE RAMP, AND THAT IS THE CONSTITUTION, NOT TASTE.
+   * Design §2.2 makes alloro-orange the only attention-grabber and §8.1 says a
+   * colour encoding no state is decoration; A47 checks it. A slice of a
+   * where-did-they-come-from chart does not need anybody, so it does not get her.
+   * A five-hue chart would be prettier and would break that rule — if it is
+   * wanted, it is a Design §2.2 amendment, not a chart tweak.
+   */
+  const shades = ["stroke-alloro-navy", "stroke-alloro-deepblue", "stroke-alloro-slateblue", "stroke-ink-muted"];
+  const swatches = ["bg-alloro-navy", "bg-alloro-deepblue", "bg-alloro-slateblue", "bg-ink-muted"];
   const strokeOf = (p: Point, i: number) =>
     p.muted ? "stroke-line-medium" : p.needsYou ? "stroke-alloro-orange" : shades[i % shades.length];
   const swatchOf = (p: Point, i: number) =>
@@ -287,7 +367,12 @@ export function Ring({
   let start = 0;
   return (
     <Figure title={title} points={points} className="flex flex-wrap items-center gap-4 sm:gap-5">
-      <svg className={`block shrink-0 -rotate-90 ${big ? "h-32 w-32" : "h-24 w-24"}`} viewBox="0 0 42 42" aria-hidden="true">
+      {/* T105 — ⛔ BIGGER WHEN THE CARD HAS THE ROOM. Jov: "maximize its space, so
+          it's elegant to look at." The ring sat at 128px inside a two-column card
+          with a pool of linen beside it. The viewBox is square, so growing it
+          scales nothing unevenly — A49's stretched-radius trap needs a
+          non-square viewBox and this has never had one. */}
+      <svg className={`block shrink-0 -rotate-90 ${big ? "h-44 w-44 sm:h-52 sm:w-52" : "h-24 w-24"}`} viewBox="0 0 42 42" aria-hidden="true">
         <circle cx="21" cy="21" r="15.915" fill="none" strokeWidth="6" className="stroke-line-soft" />
         {points.map((p, i) => {
           const pct = (p.value / total) * 100;

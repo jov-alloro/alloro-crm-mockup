@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import { useUi } from "../lib/ui-context";
 import { Button, Card, PageSkeleton, Verdict } from "../components/ui";
 import { InlineCard } from "../components/Cards";
-import { MonthBars, Ring, SplitBar, SpreadBars, TileGrid } from "../components/Charts";
+import { MonthBars, Pillars, Ring, SpreadBars, TileGrid } from "../components/Charts";
 import { bySource, foundStory, moneyByMonth, topItems, wroteInSplit } from "../lib/charts";
 import { statusLabel } from "../lib/engine";
 import type { StatusKey } from "../lib/engine";
@@ -160,7 +160,10 @@ export default function Dashboard() {
               67 against 43 is a spread and the gap is the finding — the same test
               that refused bars on the card beside it, where four shares sat within
               35% of each other. See the note above SplitBar. */}
-          <SplitBar title="Who became a client" points={charts.split} go={ui.go} />
+          {/* T106 (Rev 27) — two pillars, at Jov's ask. See the note above Pillars
+              for what a stacked bar said that two pillars do not, and why the
+              headline above still carries it. */}
+          <Pillars title="Who became a client" points={charts.split} go={ui.go} />
           <p className="t-meta mt-3">
             {stats.wrote - stats.became > 0
               ? `${stats.wrote - stats.became} wrote in and have not paid yet.`
