@@ -124,6 +124,69 @@ export function TileGrid({
  * ⛔ AN HTML ELEMENT WITH A PERCENTAGE WIDTH, NEVER A STRETCHED SVG. The radius
  * is then in real pixels and nothing scales it, which is the whole fix.
  */
+/**
+ * T101 (Rev 25) — ⛔ TWO PARTS OF ONE WHOLE, AS ONE BAR.
+ *
+ * ⛔ T50's RULE ALLOWS THIS, AND I CHECKED RATHER THAN ASSUMED. The rule reads:
+ * a bar when the SPREAD carries the meaning, a tile when the NUMBER does. This
+ * is 67 against 43 — 61% and 39% — and the gap IS the finding, because the
+ * whole point of the card is that forty-three people wrote in and never paid.
+ * That is the same test that REFUSED bars on the card beside it, where four
+ * shares sat within 35% of each other. The rule said yes here and no there,
+ * which is what a rule is for.
+ *
+ * ⛔ THE RADIUS LIVES ON THE TRACK, NOT ON THE SEGMENTS. A49 exists because a
+ * rounded shape scaled inside an SVG viewBox turned a 4px corner into a 30px
+ * ellipse. The track is a plain HTML element with overflow-hidden and
+ * rounded-full; the segments are rectangles clipped by it, so nothing is
+ * stretched and there is no radius to distort.
+ *
+ * ⛔ TERRACOTTA IS THE SECOND SEGMENT BECAUSE IT IS THE ONE THAT NEEDS SOMEBODY
+ * (A47, Design §2.2 — attention, never decoration). The data already says so:
+ * "Not yet" carries needsYou, set where the numbers are built rather than here.
+ */
+export function SplitBar({
+  title, points, go,
+}: { title: string; points: Point[]; go?: (href: string) => void }) {
+  const total = Math.max(1, points.reduce((n, p) => n + p.value, 0));
+  return (
+    <Figure title={title} points={points} className="flex flex-col gap-3">
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-line-medium" aria-hidden="true">
+        {points.map((pt) => (
+          <div
+            key={pt.label}
+            className={pt.needsYou ? "bg-alloro-orange" : "bg-alloro-navy"}
+            style={{ width: `${Math.round((pt.value / total) * 100)}%` }}
+          />
+        ))}
+      </div>
+      <dl className="flex flex-wrap gap-x-5 gap-y-1">
+        {points.map((pt) => {
+          const body = (
+            <span className="inline-flex items-baseline gap-1.5">
+              <span
+                aria-hidden="true"
+                className={`inline-block h-2 w-2 shrink-0 translate-y-[-1px] rounded-full ${pt.needsYou ? "bg-alloro-orange" : "bg-alloro-navy"}`}
+              />
+              <dd className="text-[15px] font-extrabold tabular-nums text-alloro-navy">{pt.display ?? pt.value}</dd>
+              <dt className="t-meta">{pt.label.toLowerCase()}</dt>
+            </span>
+          );
+          return pt.href && go ? (
+            <button key={pt.label} type="button" onClick={() => go(pt.href!)} data-testid="chart-point"
+              data-href={pt.href} aria-label={`${pt.label}: ${pt.display ?? pt.value}`}
+              className="underline-offset-4 hover:underline">
+              {body}
+            </button>
+          ) : (
+            <span key={pt.label}>{body}</span>
+          );
+        })}
+      </dl>
+    </Figure>
+  );
+}
+
 export function SpreadBars({ title, points }: { title: string; points: Point[] }) {
   const max = Math.max(1, ...points.map((p) => p.value));
   return (

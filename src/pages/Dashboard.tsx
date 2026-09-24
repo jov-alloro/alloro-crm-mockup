@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import { useUi } from "../lib/ui-context";
 import { Button, Card, PageSkeleton, Verdict } from "../components/ui";
 import { InlineCard } from "../components/Cards";
-import { MonthBars, Ring, SpreadBars, TileGrid } from "../components/Charts";
+import { MonthBars, Ring, SplitBar, SpreadBars, TileGrid } from "../components/Charts";
 import { bySource, foundStory, moneyByMonth, topItems, wroteInSplit } from "../lib/charts";
 import { statusLabel } from "../lib/engine";
 import type { StatusKey } from "../lib/engine";
@@ -141,7 +141,11 @@ export default function Dashboard() {
             it something to say. The ring is bigger and the split is named in
             words underneath, so the space is used rather than hidden.
           */}
-          <Ring title="Who became a client" points={charts.split} go={ui.go} big />
+          {/* T101 (Rev 25) — ⛔ A BAR, NOT A RING, AND T50's RULE WAS ASKED FIRST.
+              67 against 43 is a spread and the gap is the finding — the same test
+              that refused bars on the card beside it, where four shares sat within
+              35% of each other. See the note above SplitBar. */}
+          <SplitBar title="Who became a client" points={charts.split} go={ui.go} />
           <p className="t-meta mt-3">
             {stats.wrote - stats.became > 0
               ? `${stats.wrote - stats.became} wrote in and have not paid yet.`

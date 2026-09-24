@@ -27,18 +27,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # ⛔ npm install, NOT npm ci, AND THE REASON IS WORTH KNOWING.
-      # `npm ci` refuses unless package.json and package-lock.json agree exactly.
-      # This lockfile was generated on Windows, so it omits the optional
-      # platform packages a Linux runner needs (@emnapi/*, the WASM fallbacks
-      # behind Tailwind's native binaries). Nothing is wrong with the code; the
-      # lockfile simply does not describe this platform.
+      # ⛔ npm ci IS BACK, AND THE LOCKFILE IS WHY IT CAN BE.
+      # It refused on the runner twice, because the lockfile had been generated on
+      # Windows and did not describe Linux: no @emnapi/* — the WASM fallbacks
+      # behind Tailwind's native binaries — and no linux-x64 entries. Neither
+      # could show locally, because node_modules was already there.
       #
-      # ⚠ THE COST, STATED: `npm ci` is the reproducible one. `npm install` may
-      # resolve a different patch version than the lockfile pins. Regenerating
-      # the lockfile on Linux would fix it properly and is worth doing
-      # deliberately rather than inside a hotfix.
-      - run: npm install --no-audit --no-fund
+      # Regenerating it FROM SCRATCH (deleting it, then npm install
+      # --package-lock-only) records the optional packages for every platform.
+      # Measured: 250 packages before and after, ZERO version changes, zero added,
+      # zero removed — only the platform entries that were missing.
+      - run: npm ci
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
