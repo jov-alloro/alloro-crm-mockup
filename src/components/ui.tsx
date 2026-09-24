@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./icons";
 
 /** Shared primitives. Design §12.3 — every control clears 44px. */
@@ -215,6 +216,167 @@ export function Sheet({
         {children}
       </div>
     </div>
+  );
+}
+
+/**
+ * T99 (Rev 24) — ⛔ A COMBO BOX: PICK WHAT EXISTS, OR TYPE SOMETHING NEW.
+ *
+ * Jov asked for a dropdown and asked to be roasted, so: a closed dropdown means
+ * the owner can never invent a group. This field IS the email audience list, so
+ * freezing it lets the product decide what groups a business may have — the same
+ * "interface writing the data model" move T76 refused.
+ *
+ * ⛔ AND FREE TEXT WAS WORSE, WHICH IS THE PART NOBODY ASKED ABOUT. The group
+ * list was built from the raw text and matched with ===, so "Regular", "regular"
+ * and "Regular " were three separate audiences. T98 fixed the matching; this
+ * fixes the typing, by showing what already exists before somebody invents a
+ * fourth spelling of it.
+ *
+ * ⛔ THE MENU FROM T83 DOES NOT FIT HERE, AND THAT IS WORTH SAYING RATHER THAN
+ * FORCING. Its trigger is a button showing a chosen value, and its list is
+ * closed. Here the control IS a text input, typing is the primary act, and the
+ * list narrows as you type. Same visual recipe, different job.
+ *
+ * ⛔ THE LIST IS PORTALLED, for the reason Menu's is: this field lives inside a
+ * Sheet, and a Sheet scrolls with overflow-auto, so an absolutely positioned list
+ * would be clipped by it.
+ */
+export function Combo({
+  label, value, onChange, options, hint, placeholder, testId,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  /** What has been used before. Never a limit on what can be typed. */
+  options: string[];
+  hint?: string;
+  placeholder?: string;
+  testId?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [at, setAt] = useState(-1);
+  const [box, setBox] = useState<{ top: number; left: number; width: number } | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const listId = `${useId()}-combo`;
+
+  const typed = value.trim().toLowerCase();
+  const shown = options.filter((o) => !typed || o.toLowerCase().includes(typed));
+  const exact = options.some((o) => o.trim().toLowerCase() === typed);
+
+  const place = useCallback(() => {
+    const r = input.current?.getBoundingClientRect();
+    if (r) setBox({ top: r.bottom + 4, left: r.left, width: r.width });
+  }, []);
+
+  useLayoutEffect(() => { if (open) place(); }, [open, place]);
+  useEffect(() => {
+    if (!open) return;
+    const again = () => place();
+    window.addEventListener("resize", again);
+    window.addEventListener("scroll", again, true);
+    return () => { window.removeEventListener("resize", again); window.removeEventListener("scroll", again, true); };
+  }, [open, place]);
+
+  /* ⛔ pointerdown with the input excluded — the same click-versus-focus lesson
+     Menu carries. Closing on blur and reopening on the click that caused it is a
+     control that cannot be dismissed by pressing it. */
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (input.current?.contains(t) || list.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [open]);
+
+  const choose = (v: string) => { onChange(v); setOpen(false); setAt(-1); input.current?.focus(); };
+
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!open) { setOpen(true); setAt(0); return; }
+      setAt((n) => (shown.length ? (n + 1) % shown.length : -1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setAt((n) => (shown.length ? (n - 1 + shown.length) % shown.length : -1));
+    } else if (e.key === "Enter") {
+      // ⛔ Enter on a highlighted row picks it; Enter on your own words KEEPS
+      // them. A combo that overwrote what you typed would be a dropdown wearing
+      // a text box, which is the thing this is not.
+      if (open && at >= 0 && shown[at]) { e.preventDefault(); choose(shown[at]); }
+      else setOpen(false);
+    } else if (e.key === "Escape") {
+      if (open) { e.preventDefault(); setOpen(false); setAt(-1); }
+    }
+  };
+
+  return (
+    <label className="block mb-3">
+      <span className="eyebrow block mb-1">{label}</span>
+      <input
+        ref={input}
+        type="text"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        aria-autocomplete="list"
+        aria-activedescendant={open && at >= 0 ? `${listId}-${at}` : undefined}
+        value={value}
+        data-testid={testId}
+        placeholder={placeholder}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); setAt(-1); }}
+        onFocus={() => options.length > 0 && setOpen(true)}
+        onKeyDown={onKey}
+        className="tap w-full rounded-xl border border-line-medium bg-alloro-surface px-3.5 text-base transition-colors focus:border-alloro-orange"
+      />
+      {hint ? <span className="t-meta mt-1 block">{hint}</span> : null}
+
+      {open && box && shown.length > 0
+        ? createPortal(
+            <div
+              ref={list}
+              id={listId}
+              role="listbox"
+              aria-label={label}
+              data-testid={testId ? `${testId}-list` : undefined}
+              style={{ position: "fixed", top: box.top, left: box.left, minWidth: box.width, zIndex: 80 }}
+              className="card-radius max-h-64 overflow-auto border border-line-soft bg-alloro-surface py-1 shadow-premium"
+            >
+              {shown.map((o, i) => (
+                <div
+                  key={o}
+                  id={`${listId}-${i}`}
+                  role="option"
+                  aria-selected={o.trim().toLowerCase() === typed}
+                  data-testid={testId ? `${testId}-opt` : undefined}
+                  data-value={o}
+                  onPointerEnter={() => setAt(i)}
+                  onClick={() => choose(o)}
+                  className={[
+                    "cursor-pointer px-3 py-2 text-[13px] font-semibold",
+                    i === at ? "bg-alloro-bg text-alloro-navy" : "text-alloro-navy",
+                  ].join(" ")}
+                >
+                  {o}
+                </div>
+              ))}
+              {/* ⛔ SAYS OUT LOUD THAT A NEW ONE IS ALLOWED. Without this a list of
+                  existing values reads as the only values, which is the dropdown
+                  this deliberately is not. */}
+              {!exact && typed ? (
+                <p className="t-meta border-t border-line-soft px-3 py-2" data-testid={testId ? `${testId}-new` : undefined}>
+                  Or keep &ldquo;{value.trim()}&rdquo; as a new one.
+                </p>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
+    </label>
   );
 }
 

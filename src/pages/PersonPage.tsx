@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useUi } from "../lib/ui-context";
 import {
-  Button, Card, Chip, EmptyState, Field, PageSkeleton, Placeholder, Select, Sheet, Verdict,
+  Button, Card, Chip, Combo, EmptyState, Field, PageSkeleton, Placeholder, Select, Sheet, Verdict,
 } from "../components/ui";
 import {
   FOUND_LABEL, GOT_LABEL, canEmail, moneyLine, openMessage, statusLabel, whyLine,
@@ -900,6 +900,18 @@ export function AddByHand({ onClose }: { onClose?: () => void }) {
   const [found, setFound] = useState<FoundKey>("not-known");
   const [category, setCategory] = useState("");
   const [note, setNote] = useState("");
+
+  /* T99 — what has been used before, one entry per category rather than one per
+     spelling. The first spelling recorded is the one offered, the same rule the
+     email groups use, so the two screens never disagree about a group's name. */
+  const usedCategories = useMemo(() => {
+    const first = new Map<string, string>();
+    for (const x of ui.model.visible) {
+      const raw = x.c.category?.trim();
+      if (raw && !first.has(raw.toLowerCase())) first.set(raw.toLowerCase(), raw);
+    }
+    return [...first.values()].sort((a, b) => a.localeCompare(b));
+  }, [ui.model]);
   const [billingOn, setBillingOn] = useState(false);
   const [plan, setPlan] = useState("");
   const [amount, setAmount] = useState("");
@@ -944,7 +956,19 @@ export function AddByHand({ onClose }: { onClose?: () => void }) {
             { value: "ad", label: "An ad" }, { value: "walk-in", label: "Walked in" },
             { value: "not-known", label: "Not known" },
           ]} />
-        <Field label="Category" value={category} onChange={setCategory} testId="add-category" hint="Optional. It is how you pick a group to email." />
+        {/* T99 (Rev 24) — ⛔ A COMBO, NOT A TEXT BOX AND NOT A DROPDOWN. It shows
+            the categories already in use so nobody invents a fourth spelling of
+            one that exists, and it still takes a brand new word, because this
+            field is the email audience list and the owner decides what their
+            groups are. */}
+        <Combo
+          label="Category"
+          value={category}
+          onChange={setCategory}
+          options={usedCategories}
+          testId="add-category"
+          hint="Optional. It is how you pick a group to email."
+        />
         <Field label="Notes" value={note} onChange={setNote} testId="add-note" />
         <p className="flex items-center justify-between border-t border-line-soft pt-3">
           <span className="eyebrow">Added by</span>

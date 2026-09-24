@@ -30,15 +30,44 @@ export default function EmailGroup() {
   const [thinking, setThinking] = useState(false);
   const [diff, setDiff] = useState<{ before: string; after: string } | null>(null);
 
+  /**
+   * T98 (Rev 24) — ⛔ ONE GROUP PER CATEGORY, NOT ONE PER SPELLING.
+   *
+   * This list was built from a Set of the raw text and matched with ===, so
+   * "Regular", "regular" and "Regular " were THREE separate email groups and none
+   * contained the other's people. A typo on one record split an audience in
+   * silence: the owner sent to 40 people believing they had sent to 43, and
+   * nothing on the screen said otherwise.
+   *
+   * ⛔ THE FIRST SPELLING RECORDED IS THE ONE SHOWN, and that is a choice with a
+   * reason. "Most used" also works and is worse: the group would RENAME ITSELF
+   * the moment counts crossed, so a saved habit ("email the Regulars") would
+   * quietly become something else. First-seen is stable.
+   */
   const categories = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of model.visible) if (p.c.category) set.add(p.c.category);
-    return [...set].sort();
+    const firstSpelling = new Map<string, string>();
+    for (const p of model.visible) {
+      const raw = p.c.category?.trim();
+      if (!raw) continue;
+      const key = raw.toLowerCase();
+      if (!firstSpelling.has(key)) firstSpelling.set(key, raw);
+    }
+    return [...firstSpelling.entries()]
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [model]);
+
+  /* ⛔ THE DRAFT GETS THE SPELLING, NOT THE KEY. `group` is lowercased for
+     matching; handing that to the campaign writer would put "regular" in the
+     owner's email where they had written "Regular". */
+  const groupLabel = group === "everyone" ? "everyone" : (categories.find((c) => c.key === group)?.label ?? group);
 
   const { included, excluded } = useMemo(() => {
     const base = model.visible.filter((p) => p.c.kind === "person");
-    const inGroup = base.filter((p) => group === "everyone" || p.c.category === group);
+    /* ⛔ `group` holds the KEY (trimmed, lowercased), never the spelling. */
+    const inGroup = base.filter(
+      (p) => group === "everyone" || (p.c.category ?? "").trim().toLowerCase() === group,
+    );
     const inc: Profile[] = [];
     const exc: { p: Profile; why: string }[] = [];
     for (const p of inGroup) {
@@ -94,7 +123,7 @@ export default function EmailGroup() {
           value={group}
           onChange={setGroup}
           testId="group-picker"
-          options={[{ value: "everyone", label: "Everyone" }, ...categories.map((c) => ({ value: c, label: c }))]}
+          options={[{ value: "everyone", label: "Everyone" }, ...categories.map((c) => ({ value: c.key, label: c.label }))]}
         />
         <p className="t-body" data-testid="group-count">
           {plural(included.length, "person", "people")} will get it.
@@ -151,7 +180,7 @@ export default function EmailGroup() {
             <Button small icon="suggest" testId="campaign-ai-draft" disabled={thinking}
               onClick={() => {
                 setThinking(true);
-                window.setTimeout(() => { setBody(suggestCampaign(group, included.length, ui.world)); setThinking(false); }, 500);
+                window.setTimeout(() => { setBody(suggestCampaign(groupLabel, included.length, ui.world)); setThinking(false); }, 500);
               }}>
               {thinking ? "Writing\u2026" : "Draft from the audience"}
             </Button>

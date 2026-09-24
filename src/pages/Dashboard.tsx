@@ -3,7 +3,7 @@ import { useUi } from "../lib/ui-context";
 import { Button, Card, PageSkeleton, Verdict } from "../components/ui";
 import { InlineCard } from "../components/Cards";
 import { MonthBars, Ring, SpreadBars, TileGrid } from "../components/Charts";
-import { byFound, bySource, moneyByMonth, topItems, wroteInSplit } from "../lib/charts";
+import { bySource, foundStory, moneyByMonth, topItems, wroteInSplit } from "../lib/charts";
 import { statusLabel } from "../lib/engine";
 import type { StatusKey } from "../lib/engine";
 import { money, plural } from "../lib/format";
@@ -43,7 +43,7 @@ export default function Dashboard() {
 
   /** Every chart's points, built from the same events every other screen reads. */
   const charts = useMemo(() => ({
-    found: byFound(model),
+    found: foundStory(model, model.pack.customers),
     source: bySource(model),
     split: wroteInSplit(model),
     items: topItems(model),
@@ -93,10 +93,40 @@ export default function Dashboard() {
       */}
       <div className="grid grid-flow-row-dense gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Tile title="Who came from where" span={2}>
-          {/* T49 — tiles, not bars. The five values sit within 35% of each other
-              and the list is already sorted, so a bar drew a ranking the order
-              had already given. T50 has the rule. */}
-          <TileGrid title="Who came from where" points={charts.found} go={ui.go} />
+          {/*
+            T49/T50 — ⛔ STILL TILES, NOT BARS, AND THAT IS THE RULE DECIDING IT
+            RATHER THAN INERTIA. T50's rule reads: a bar when the SPREAD carries
+            the meaning, a tile when the NUMBER does. These read 38, 33, 29, 22 —
+            within 35% of each other and already sorted, so a bar would redraw a
+            ranking the order has already given.
+
+            ⛔ I RECOMMENDED BARS FOR THIS CARD AND THE RULE SAYS NO. T50 was
+            written so the next chart would have "a rule to be judged against
+            rather than a precedent to copy". This is the first time it has been
+            used that way, and it overruled me.
+
+            What the card was missing was never the instrument. It had no
+            sentence, no denominator, and it ranked an absence against a channel.
+          */}
+          {/* Design §6.1 — the verdict first. This card had none at all: an
+              eyebrow label and five numbers, stating data and saying nothing. */}
+          <p className="t-body measure font-semibold" data-testid="found-verdict">{charts.found.sentence}</p>
+          <TileGrid title="Who came from where" points={charts.found.known} go={ui.go} />
+          {/*
+            ⛔ THE ABSENCE GETS ITS OWN LINE, BELOW THE SOURCES, NOT A RANK AMONG
+            THEM. It is a fact about the records rather than a way anybody arrived,
+            and at one person in five it is the most actionable number here.
+          */}
+          {charts.found.unknown ? (
+            <button
+              type="button"
+              data-testid="found-unknown"
+              onClick={() => ui.go(charts.found.unknown!.href)}
+              className="t-meta mt-3 block text-left underline-offset-2 hover:underline"
+            >
+              {charts.found.unknown.n} of these {charts.found.total} have no source written down — about {charts.found.unknown.share}%.
+            </button>
+          ) : null}
           <Next icon="people" onClick={() => ui.go("#/people")}>See them in your list</Next>
         </Tile>
 

@@ -25,6 +25,13 @@ export interface Point {
   value: number;
   /** How the value reads next to its bar: "38", "$6,180". */
   display?: string;
+  /**
+   * T97 (Rev 24) — the same number said a second way, under the first: "25%".
+   * ⛔ A COUNT WITH NO DENOMINATOR MAKES THE READER DO THE ARITHMETIC. Five
+   * equal tiles reading 38, 33, 29, 29, 22 look interchangeable until you know
+   * the list is 151 long.
+   */
+  sub?: string;
   /** Where this number's people live. T36 — every number names its people. */
   href?: string;
   /**
@@ -58,6 +65,54 @@ export function byFound(m: Model): Point[] {
       display: String(n),
       href: `#/people/f/found/${k}`,
     }));
+}
+
+/**
+ * T97 (Rev 24) — ⛔ THE SAME NUMBERS, WITH THE THING THAT WAS MISSING: A SENTENCE,
+ * A DENOMINATOR, AND "NOT KNOWN" TAKEN OUT OF THE RANKING.
+ *
+ * ⛔ "NOT KNOWN" IS NOT A CHANNEL, IT IS THE ABSENCE OF ONE. It sat third in the
+ * list, ranked against Google and referrals, which reads as "29 people found us
+ * via not-known". They did not. Nobody wrote down how they arrived. That is a
+ * fact about the RECORDS, and at 29 of 151 it is one person in five — the most
+ * actionable number on the card, and the ranking was hiding it in third place.
+ *
+ * ⛔ AND THE SENTENCE REFUSES TO SAY "MOST" WHEN IT IS NOT TRUE. The top source
+ * is 25% here. A card that opened with "Most of your clients found you on Google"
+ * would be the fifth control in five rounds saying something untrue — so the
+ * wording is chosen by the share, not written once and left.
+ */
+export function foundStory(m: Model, customers: string): {
+  known: Point[];
+  unknown: { n: number; href: string; share: number } | null;
+  total: number;
+  sentence: string;
+} {
+  const all = byFound(m);
+  const total = m.visible.length;
+  const unknownLabel = FOUND_LABEL["not-known" as FoundKey];
+  const known = all.filter((x) => x.label !== unknownLabel);
+  const missing = all.find((x) => x.label === unknownLabel);
+  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+
+  for (const k of known) k.sub = `${pct(k.value)}%`;
+
+  const top = known[0];
+  const share = top && total ? top.value / total : 0;
+  const sentence = !top
+    ? `Nobody has a recorded source yet.`
+    : share >= 0.5
+      ? `More than half found you the same way: ${top.label} — ${top.value} of ${total}.`
+      : share >= 0.33
+        ? `About a third found you the same way: ${top.label} — ${top.value} of ${total}.`
+        : `No one way stands out. The biggest is ${top.label}, at ${top.value} of ${total} ${customers}.`;
+
+  return {
+    known,
+    unknown: missing ? { n: missing.value, href: missing.href!, share: pct(missing.value) } : null,
+    total,
+    sentence,
+  };
 }
 
 /** How Alloro got them. A person can carry more than one, so these do not sum to the list. */

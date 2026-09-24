@@ -69,7 +69,15 @@ export function TileGrid({
       the rows down the card, so there is no pool under them.
     */
     <Figure title={title} points={points} className="flex flex-1 flex-col">
-      <dl className="flex flex-1 flex-wrap content-between gap-2">
+      {/*
+        ⛔ content-evenly, NOT content-between, AND THE DIFFERENCE ONLY SHOWS WITH
+        ONE ROW. `content-between` pushes the first row to the top and the last to
+        the bottom, which spreads two rows beautifully and does NOTHING to one —
+        it pins the single row to the top and leaves the whole remainder as a pool
+        underneath. Measured on this card: 152px of it. T97 removed a tile, which
+        made it one row of four, which made the bug visible.
+      */}
+      <dl className="flex flex-1 flex-wrap content-evenly gap-2">
         {points.map((pt) => {
           const body = (
             <>
@@ -79,6 +87,9 @@ export function TileGrid({
               <dd className={`mt-1.5 text-[14px] font-extrabold leading-snug tabular-nums ${pt.needsYou ? "text-alloro-orange-text-safe" : "text-alloro-navy"}`}>
                 {pt.display ?? pt.value}
               </dd>
+              {/* T97 — the share, under the count. Quiet on purpose: the count is
+                  the number, the share is what makes two counts comparable. */}
+              {pt.sub ? <dd className="t-meta tabular-nums">{pt.sub}</dd> : null}
             </>
           );
           return pt.href && go ? (

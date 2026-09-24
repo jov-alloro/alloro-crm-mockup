@@ -178,11 +178,23 @@ export default function Conversation() {
             />
             {/* T91 (Rev 20) — the same act, so the same word. This one already cleared
                 both its filter and its search, which is exactly what Reset now means
-                on People. */}
+                on People.
+                ⛔ T100 (Rev 24) — AND THE SAME PLACE. Jov: "same, this reset button
+                should be on the right side." People's Reset was pushed to the far
+                edge in Rev 20 for the reason recorded on the Email button: what you
+                turn on at one end, what turns it off at the other. Two screens with
+                the same control in two positions is the same fact told twice in
+                different words. The phone keeps a divider, because a wrapped row
+                has no far edge to push to. */}
             {filtered ? (
-              <Button small icon="reset" testId="inbox-clear" onClick={() => { setState("all"); setQ(""); }}>
-                Reset
-              </Button>
+              <>
+                <span aria-hidden="true" data-testid="inbox-divider" className="mx-1 h-8 w-px bg-line-soft sm:hidden" />
+                <span className="sm:ml-auto">
+                  <Button small icon="reset" testId="inbox-clear" onClick={() => { setState("all"); setQ(""); }}>
+                    Reset
+                  </Button>
+                </span>
+              </>
             ) : null}
           </div>
 
