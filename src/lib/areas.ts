@@ -1,16 +1,20 @@
 import type { Route } from "./router";
 
 /**
- * T1 — the four tabs, from ONE array.
+ * T1 — the tabs, from ONE array. THREE since Rev 32: the fourth, "Needs you",
+ * became a section of the Dashboard (T125).
  *
  * The rail, the bubble, the phone picker and every page header read this list,
  * so they cannot disagree (spec S0).
  *
- * ⛔ Tab 3 is "Needs you", not "Cards" (spec Q1). Design §12.4: a tab is an
- * owner question, not the name of a container.
+ * ⛔ REV 32 REVERSES R5 (four areas). The verdict cards did not die — they
+ * moved into the Dashboard as their own section, so the menu names three areas
+ * and the "Needs you" question is answered one screen over, not on a tab.
+ * Design §12.4 still holds for the three that are left: a tab is an owner
+ * question, not the name of a container.
  */
 
-export type AreaKey = "people" | "conversation" | "needs" | "dashboard";
+export type AreaKey = "people" | "conversation" | "dashboard";
 
 export interface Area {
   key: AreaKey;
@@ -38,14 +42,13 @@ export const AREAS: Area[] = [
   { key: "dashboard", label: "Dashboard", subtitle: "Is it working?", href: "#/dashboard" },
   { key: "people", label: "People", subtitle: "Everyone, and where each one came from.", href: "#/people" },
   { key: "conversation", label: "Conversation", subtitle: "What they said, and who has answered.", href: "#/conversation" },
-  { key: "needs", label: "Needs you", subtitle: "What to do right now, one thing at a time.", href: "#/needs" },
 ];
 
 export function area(key: AreaKey): Area {
   return AREAS.find((a) => a.key === key)!;
 }
 
-/** Which of the four a screen belongs to. */
+/** Which of the three a screen belongs to. */
 export function areaOf(route: Route): AreaKey | null {
   switch (route.name) {
     case "people":
@@ -60,8 +63,6 @@ export function areaOf(route: Route): AreaKey | null {
     case "thread":
     case "spam":
       return "conversation";
-    case "needs":
-      return "needs";
     case "dashboard":
       return "dashboard";
     default:

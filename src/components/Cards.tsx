@@ -34,7 +34,7 @@ export function InlineCard({ card, quiet }: { card: CardModel; quiet?: boolean }
       <CardRow card={card} inline primary={!quiet} />
       <button
         type="button"
-        onClick={() => ui.go("#/needs")}
+        onClick={() => ui.go("#/dashboard/needs")}
         className="t-meta mt-1 underline underline-offset-2"
         data-testid="inline-card-seeall"
       >

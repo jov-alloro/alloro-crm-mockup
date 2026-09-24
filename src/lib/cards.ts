@@ -170,7 +170,7 @@ export function buildCards(m: Model, viewer: "owner" | "staff" | "alloro"): Card
    *
    * These cards carry sentences like "$6,240 quoted" and "$5,115 in the last 12
    * months", built above without asking who is looking. Three screens then drew
-   * them: Needs you, the Dashboard and People's inline card. ⛔ A COMPONENT
+   * them: the Dashboard's section, and the inline cards on People and Conversation. ⛔ A COMPONENT
    * CANNOT UN-SAY A SENTENCE THAT ALREADY HAS THE MONEY IN IT — the only place
    * this can be fixed once is where the string is made.
    */
@@ -203,12 +203,14 @@ export function groupCards(cards: Card[]): { key: GroupKey; title: string; hint:
 }
 
 /**
- * The ONE inline card for a tab (spec R9). ⛔ Never a stack, never a pop-up,
- * and Needs you itself renders none — it is the list.
+ * The ONE inline card for a tab (spec R9). ⛔ Never a stack, never a pop-up.
+ *
+ * ⛔ REV 32: THERE IS NO "dashboard" CASE ANY MORE. The Dashboard holds the whole
+ * list as a section, and one card above the list it belongs to is the same card
+ * twice. The answer to "where do the rest live" is now "the Dashboard".
  */
-export function inlineCard(cards: Card[], tab: "people" | "conversation" | "dashboard", visibleIds?: Set<string>): Card | undefined {
+export function inlineCard(cards: Card[], tab: "people" | "conversation", visibleIds?: Set<string>): Card | undefined {
   if (tab === "conversation") return cards.find((c) => c.kind === "unanswered");
-  if (tab === "dashboard") return cards[0];
   if (visibleIds) return cards.find((c) => visibleIds.has(c.p.c.id));
   return cards[0];
 }

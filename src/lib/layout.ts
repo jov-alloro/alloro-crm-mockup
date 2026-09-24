@@ -86,8 +86,8 @@ export function isTab(route: Route): boolean {
  * to remember, so it lands on the owning tab. A38d checks that too.
  */
 const REMEMBERS: Partial<Record<Route["name"], Route["name"][]>> = {
-  person: ["thread", "needs", "dashboard", "conversation", "spam", "email-group"],
-  thread: ["needs", "dashboard"],
+  person: ["thread", "dashboard", "conversation", "spam", "email-group"],
+  thread: ["dashboard"],
 };
 
 export function upTarget(route: Route, from?: Route | null, fromLabel?: string): UpTarget | null {
@@ -153,8 +153,11 @@ function hrefOf(r: Route): string | null {
   switch (r.name) {
     case "thread": return `#/conversation/${r.id}`;
     case "spam": return "#/conversation/spam";
-    case "needs": return "#/needs";
-    case "dashboard": return "#/dashboard";
+    /* T125 (Rev 32) — the section a card was opened from, not just the tab. The
+       verdict cards live IN the Dashboard now, so "Back" from a person or a
+       thread must return to the list you were working down, not the top of the
+       page. */
+    case "dashboard": return r.section ? `#/dashboard/${r.section}` : "#/dashboard";
     case "conversation": return "#/conversation";
     case "email-group": return "#/people/email";
     default: return null;

@@ -39,7 +39,7 @@ import type { TimelineEvent } from "../data/types";
  *   that nothing is set by hand. Two states for one idea drift apart.
  *
  *   CATEGORY TABS. Those exist because Gmail cannot tell you what matters.
- *   Needs you already is that tab.
+ *   The Dashboard's "What needs you" section already is that view.
  */
 
 interface Row { p: Profile; e: TimelineEvent; open: boolean; }

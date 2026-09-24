@@ -16,7 +16,6 @@ import MoveIn from "./pages/MoveIn";
 import Conversation from "./pages/Conversation";
 import Thread from "./pages/Thread";
 import Spam from "./pages/Spam";
-import NeedsYou from "./pages/NeedsYou";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import Team from "./pages/Team";
@@ -64,17 +63,28 @@ export default function App() {
     if (!parsed.known) window.location.hash = "#/people";
   }, [parsed.known]);
 
+  /* T125 (Rev 32) — an OLD address that still means something (`#/needs`) is
+     REPLACED, not pushed. Pushing would leave the dead address in history, and
+     Back would land on it and redirect again — a trap the browser's own Back
+     button cannot escape. */
+  useEffect(() => {
+    if (parsed.redirect) window.location.replace(parsed.redirect);
+  }, [parsed.redirect]);
+
   useEffect(() => {
     const onHash = () => setHash(window.location.hash);
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  /* T125 (Rev 32) — a jump WITHIN the Dashboard (`#/dashboard` ↔ `#/dashboard/needs`)
+     is not a new screen, so it must not throw the skeleton up and back. */
+  const loadKey = parsed.route.name === "dashboard" ? "#/dashboard" : hash;
   useEffect(() => {
     setLoading(true);
     const t = window.setTimeout(() => setLoading(false), demo.state.slowConnection ? SLOW : FAST);
     return () => window.clearTimeout(t);
-  }, [hash, demo.state.business, demo.state.viewer, demo.state.slowConnection]);
+  }, [loadKey, demo.state.business, demo.state.viewer, demo.state.slowConnection]);
 
   useEffect(() => {
     if (!toast) return;
@@ -117,8 +127,7 @@ export default function App() {
       for (const pr of demo.model.list) {
         if (pr.events.some((e) => e.id === id) || pr.c.id === id) { label = `${pr.c.name}'s message`; break; }
       }
-    } else if (cameFrom?.name === "needs") label = "Needs you";
-    else if (cameFrom?.name === "dashboard") label = "Dashboard";
+    } else if (cameFrom?.name === "dashboard") label = "Dashboard";
     else if (cameFrom?.name === "conversation") label = "Conversation";
     else if (cameFrom?.name === "spam") label = "Hidden as spam";
     else if (cameFrom?.name === "email-group") label = "the email";
@@ -165,7 +174,6 @@ function Page({ route }: { route: Route }) {
     case "conversation": return <Conversation />;
     case "thread": return <Thread id={route.id} />;
     case "spam": return <Spam />;
-    case "needs": return <NeedsYou />;
     case "dashboard": return <Dashboard />;
     case "settings": return <Settings />;
     case "team": return <Team />;

@@ -35,14 +35,19 @@ export type Route =
   | { name: "conversation" }
   | { name: "thread"; id: string }
   | { name: "spam" }
-  | { name: "needs" }
-  | { name: "dashboard" }
+  | { name: "dashboard"; section?: "needs" }
   | { name: "settings" }
   | { name: "team" };
 
 export const HOME = "#/people";
 
-export function parse(hash: string): { route: Route; known: boolean } {
+/**
+ * T125 (Rev 32) — `redirect` is set when an address is OLD but still means
+ * something. `#/needs` was the fourth tab until the verdict cards moved into
+ * the Dashboard; a bookmark to it must land on the section that replaced it,
+ * and the bar must say so (Design §5.3), rather than fall through to People.
+ */
+export function parse(hash: string): { route: Route; known: boolean; redirect?: string } {
   const h = hash.replace(/^#\/?/, "").replace(/\/$/, "");
   const parts = h.split("/").filter(Boolean);
   const [a, b, c] = parts;
@@ -77,8 +82,9 @@ export function parse(hash: string): { route: Route; known: boolean } {
       if (b === "spam") return { route: { name: "spam" }, known: true };
       return { route: { name: "thread", id: b }, known: true };
     case "needs":
-      return { route: { name: "needs" }, known: true };
+      return { route: { name: "dashboard", section: "needs" }, known: true, redirect: "#/dashboard/needs" };
     case "dashboard":
+      if (b === "needs") return { route: { name: "dashboard", section: "needs" }, known: true };
       return { route: { name: "dashboard" }, known: true };
     case "settings":
       if (b === "team") return { route: { name: "team" }, known: true };
@@ -104,8 +110,7 @@ export function href(route: Route): string {
     case "conversation": return "#/conversation";
     case "thread": return `#/conversation/${route.id}`;
     case "spam": return "#/conversation/spam";
-    case "needs": return "#/needs";
-    case "dashboard": return "#/dashboard";
+    case "dashboard": return route.section ? `#/dashboard/${route.section}` : "#/dashboard";
     case "settings": return "#/settings";
     case "team": return "#/settings/team";
   }
