@@ -27,17 +27,24 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # ⛔ npm ci IS BACK, AND THE LOCKFILE IS WHY IT CAN BE.
-      # It refused on the runner twice, because the lockfile had been generated on
-      # Windows and did not describe Linux: no @emnapi/* — the WASM fallbacks
-      # behind Tailwind's native binaries — and no linux-x64 entries. Neither
-      # could show locally, because node_modules was already there.
+      # ⛔ npm install, AND THE ATTEMPT TO EARN npm ci FAILED. Recorded rather
+      # than quietly reverted.
       #
-      # Regenerating it FROM SCRATCH (deleting it, then npm install
-      # --package-lock-only) records the optional packages for every platform.
-      # Measured: 250 packages before and after, ZERO version changes, zero added,
-      # zero removed — only the platform entries that were missing.
-      - run: npm ci
+      # The lockfile was regenerated FROM SCRATCH on Windows (deleted, then
+      # npm install --package-lock-only). That is strictly better and it is kept:
+      # 250 packages before and after, ZERO version changes, zero added, zero
+      # removed, and it gained linux-x64 entries it did not have.
+      #
+      # ⛔ IT STILL IS NOT ENOUGH, AND THE REASON IS THE SAME ONE ALL ALONG. npm
+      # resolves optional dependencies for the platform it is RUN on, so a
+      # Windows machine never walks the branch that pulls @emnapi/* — the WASM
+      # fallbacks behind Tailwind's native binaries on Linux. `npm ci` on the
+      # runner still reports them missing. A lockfile cannot describe a platform
+      # the machine writing it has never installed for.
+      #
+      # THE REAL FIX, when somebody wants it: generate the lockfile ON LINUX — in
+      # this workflow, or in a container — and commit that. Not a Windows job.
+      - run: npm install --no-audit --no-fund
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
