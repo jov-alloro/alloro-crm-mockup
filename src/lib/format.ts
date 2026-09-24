@@ -44,7 +44,14 @@ export function relativeDay(date: string, today: string): string {
   if (d === 1) return "yesterday";
   if (d < 7) return `${d} days ago`;
   if (d < 14) return "last week";
-  if (d < 60) return `${Math.round(d / 7)} weeks ago`;
+  /*
+    T112 (Rev 29) — ⛔ THIRTY DAYS, NOT SIXTY. The review found four date formats
+    on screen; two of them were this one arguing with itself. "4 weeks ago" and
+    "8 weeks ago" are not how anybody says a date two months old — past about a
+    month the eye wants the day and the month, and the counting stops helping.
+    One boundary now: under 30 days it is relative, after that it is the date.
+  */
+  if (d < 30) return `${Math.round(d / 7)} weeks ago`;
   return dateWords(date, today);
 }
 

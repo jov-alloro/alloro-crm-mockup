@@ -127,7 +127,15 @@ export function CardRow({ card, n, inline, primary = true }: { card: CardModel; 
           {/* Design §7.1 — money never appears without the sentence above it. */}
           {card.moneyLine ? <p className="t-meta mt-0.5">{card.moneyLine}</p> : null}
         </div>
-        <div className="flex shrink-0 gap-2">
+        {/*
+          T114b (Rev 29) — ⛔ FULL NAMES MADE THE BUTTONS TOO WIDE FOR A PHONE.
+          "Check in with Beatriz" became "Check in with Beatriz Ferreira", and
+          "Add a phone number for Cleo Ferreira" is longer still. With shrink-0
+          the button could not give way, so Needs you scrolled sideways at 375px
+          and A39c caught it. The group still refuses to shrink where there is
+          room; below sm it is allowed to take its own line.
+        */}
+        <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
           {/* ⛔ Design §4.3 — ONE primary per SCREEN, not per card. Five stacked
               black buttons is the "which do I press" problem, and it was on
               screen. The first card keeps the primary; the rest step down. */}

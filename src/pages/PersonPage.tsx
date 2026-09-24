@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { canSeeMoney } from "../lib/permissions";
 import { useUi } from "../lib/ui-context";
 import {
   Button, Card, Chip, Combo, EmptyState, Field, PageSkeleton, Placeholder, Select, Sheet, Verdict,
@@ -50,7 +51,8 @@ function PersonBody({ p }: { p: Profile }) {
   const { world } = ui;
   const [sheet, setSheet] = useState<SheetKind>(null);
   const open = openMessage(p, world);
-  const mline = moneyLine(p, world);
+  /* T110 (Rev 29) — the verdict's money line goes through the one rule too. */
+  const mline = canSeeMoney(ui.viewer) ? moneyLine(p, world) : null;
   const biz = p.c.businessId ? ui.model.byId.get(p.c.businessId) : undefined;
 
   /**
@@ -228,6 +230,14 @@ function PersonBody({ p }: { p: Profile }) {
       ) : null}
 
       {/* ── 6. THEN the ledger. Everything below here is reference. ────────── */}
+      {/*
+        T110 (Rev 29) — ⛔ THIS SECTION HAD NO PERMISSION CHECK AT ALL. Every other
+        screen had one written out by hand; the profile simply never got one, so
+        staff read the full payment ledger of everybody they opened, while the
+        Team page promised Luis "No money, no export".
+      */}
+      {!canSeeMoney(ui.viewer) ? null : (
+      <>
       <h3 className="eyebrow mt-6 mb-2">Payments</h3>
       {p.buys.length === 0 ? (
         <p className="t-meta">No purchase yet.</p>
@@ -278,6 +288,8 @@ function PersonBody({ p }: { p: Profile }) {
           </Card>
         </>
       ) : null}
+      </>
+      )}
 
       {/* T38 — EVERY SOURCE WITH ITS DATE. The chips at the top say WHICH
           sources; this says WHEN each one first happened, which is the question
@@ -651,6 +663,8 @@ function BusinessBody({ p }: { p: Profile }) {
         </div>
       ) : null}
 
+      {/* T110 — a business page is a page about money too. */}
+      {!canSeeMoney(ui.viewer) ? null : (
       <p className="t-body mb-4" data-testid="business-money">
         {!world.feeds.payments.ok
           ? "Alloro can't see your payments right now, so this is unknown."
@@ -658,6 +672,7 @@ function BusinessBody({ p }: { p: Profile }) {
             ? `${money(spent)} in the last 12 months${someUnknown ? ", from the people here who have paid. Some have not." : "."}`
             : "No order yet."}
       </p>
+      )}
 
       <h3 className="eyebrow mt-6 mb-2">The people who work there</h3>
       {p.people.length === 0 ? (

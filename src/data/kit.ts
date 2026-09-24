@@ -6,7 +6,9 @@ import { addDays } from "../lib/format";
  * version does not match is DISCARDED AND RESEEDED, not migrated (spec §3.2).
  * Acceptance A35 proves it.
  */
-export const WORLD_VERSION = 1;
+/* T114/T115 (Rev 29) — bumped so saved demos rebuild: names are now unique
+   and quote values vary. A stale save would show the old ones for ever. */
+export const WORLD_VERSION = 2;
 
 /** The demo's fixed "today". A Wednesday, so the weekend rules are reachable. */
 export const TODAY = "2026-09-23";
@@ -45,10 +47,53 @@ const FOUNDS: FoundKey[] = ["google", "referral", "ad", "walk-in", "not-known"];
 const COMPANY_A = ["Harbor","Ridge","Cedar","Anchor","Foxglove","Kestrel","Birchwood","Lantern","Copper","Marlow"];
 const COMPANY_B = ["Supply","Studio","Works","Partners","Trading","Collective","Group","Holdings"];
 
-export function nameAt(_i: number, r: () => number): string {
-  const f = FIRST[Math.floor(r() * FIRST.length)];
-  const l = LAST[Math.floor(r() * LAST.length)];
-  return `${f} ${l}`;
+/**
+ * T114 (Rev 29) — ⛔ ONE FIRST NAME, ONE PERSON — AND NEVER THE OWNER'S.
+ *
+ * This drew a first and a last at random from fifty and thirty-eight, for a
+ * hundred and fifty people. ⛔ THE ARITHMETIC MAKES COLLISIONS CERTAIN: the
+ * review found two Nadias and several Cleos, so "Cleo came back" and "Cleo still
+ * hasn't been back" sat on the same screen as different people. It also drew
+ * "Theresa", which is the OWNER's name in that business — a customer with the
+ * boss's name, in a demo about telling people apart.
+ *
+ * Now it takes the names already used and the ones reserved for the owner and
+ * staff, and hands back a first name nobody else has. If fifty first names run
+ * out it keeps going with a unique FULL name, which is what the cards print.
+ */
+export function nameAt(
+  _i: number,
+  r: () => number,
+  taken?: Set<string>,
+  reserved?: string[],
+): string {
+  /* ⛔ RESERVED IS ABSOLUTE; UNIQUE-FIRST-NAME IS BEST EFFORT, and the reason is
+     arithmetic. There are fifty first names and the biggest demo has 640 people,
+     so first names MUST repeat — the first draft quietly relaxed both rules at
+     the same point, which let the owner's own name back in at person fifty-one.
+     Repeating a first name is harmless now that cards print full names (T114);
+     a customer sharing the owner's name is not, so that check never relaxes. */
+  const banned = new Set<string>((reserved ?? []).map((n) => n.split(" ")[0]));
+  const usedFirst = new Set<string>();
+  const usedFull = new Set<string>();
+  if (taken) for (const n of taken) { usedFirst.add(n.split(" ")[0]); usedFull.add(n); }
+
+  for (let tries = 0; tries < 400; tries++) {
+    const f = FIRST[Math.floor(r() * FIRST.length)];
+    const l = LAST[Math.floor(r() * LAST.length)];
+    const full = `${f} ${l}`;
+    if (banned.has(f)) continue;
+    if (usedFirst.has(f) && usedFirst.size + banned.size < FIRST.length) continue;
+    if (usedFull.has(full)) continue;
+    taken?.add(full);
+    return full;
+  }
+  /* The pools are 50 × 38; this is unreachable for any demo size we build, and
+     it returns something valid rather than looping if that ever changes. */
+  const safe = FIRST.filter((f) => !banned.has(f));
+  const fallback = `${safe[Math.floor(r() * safe.length)]} ${LAST[Math.floor(r() * LAST.length)]}`;
+  taken?.add(fallback);
+  return fallback;
 }
 
 export function emailFor(name: string, i: number): string {

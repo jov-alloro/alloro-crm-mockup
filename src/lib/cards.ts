@@ -1,5 +1,6 @@
-import { firstName, money, plural, daysBetween } from "./format";
-import { openMessage, pastAlarm, type Model, type Profile } from "./engine";
+import { dateWords, money, plural, daysBetween } from "./format";
+import { canSeeMoney } from "./permissions";
+import { canEmail, openMessage, pastAlarm, type Model, type Profile } from "./engine";
 
 /**
  * T20 — the five card kinds (spec §6.5).
@@ -42,7 +43,40 @@ export const GROUPS: { key: GroupKey; title: string; hint: string }[] = [
 export function buildCards(m: Model, viewer: "owner" | "staff" | "alloro"): Card[] {
   const w = m.world;
   const cards: Card[] = [];
-  const who = (p: Profile) => firstName(p.c.name);
+  /**
+   * T114 (Rev 29) — ⛔ FULL NAMES, BECAUSE A FIRST NAME CAN POINT AT TWO PEOPLE.
+   *
+   * The review found two different Nadias, several Cleos — "Cleo came back" and
+   * "Cleo still hasn't been back" are DIFFERENT PEOPLE, on the same screen — and
+   * a customer called Theresa, which is also the owner's name in that business.
+   * A card is an instruction: "Reply to Rosa" has to name one person or it is
+   * not an instruction at all.
+   *
+   * ⛔ A CHECK CANNOT CATCH THIS BY READING THE CARDS. Two cards saying "Cleo"
+   * are only wrong if the two Cleos are different people, which needs the data,
+   * not the text. A80 compares the names cards use against the people they point
+   * at.
+   */
+  const who = (p: Profile) => p.c.name;
+
+  /**
+   * T117 (Rev 29) — ⛔ A TASK THAT CANNOT BE DONE IS NOT A TASK.
+   *
+   * The review found Cleo Ferreira's "Check in with Cleo" on the Dashboard and on
+   * Needs you. She asked not to be emailed and has no phone number, so there is
+   * no way to reach her at all — the card names an action the product cannot
+   * perform, and pressing it lands on a screen where every way out is disabled.
+   *
+   * ⛔ THE CARD NOW SAYS THE TRUE THING AND OFFERS THE ONLY USEFUL MOVE: add a
+   * phone number. A task list that quietly includes impossible tasks teaches the
+   * owner to stop trusting it, which is worse than showing one fewer card.
+   */
+  const reachable = (p: Profile) => canEmail(p) || !!p.c.phone;
+  const noWayIn = (p: Profile) => ({
+    why: `No way to reach ${p.c.name} — add a phone number.`,
+    action: `Add a phone number for ${p.c.name}`,
+    move: "checkin" as const,
+  });
 
   for (const p of m.visible) {
     if (p.c.kind === "business" && p.people.length) continue; // people carry the card
@@ -79,10 +113,15 @@ export function buildCards(m: Model, viewer: "owner" | "staff" | "alloro"): Card
     if (p.isQuiet && !p.waitingSince) {
       cards.push({
         id: `not-back:${p.c.id}`, kind: "not-back", p,
-        move: "checkin", action: `Check in with ${who(p)}`,
-        why: p.dueBack
-          ? `${who(p)} was due back by ${p.dueBack}.`
-          : `${who(p)} usually comes every ${plural(p.usualGap ?? 0, "day")}. It's been longer.`,
+        /* T117 — if there is no way to reach them, the card says that instead of
+           naming a check-in the product cannot perform. */
+        ...(reachable(p) ? {
+          move: "checkin" as const, action: `Check in with ${who(p)}`,
+          why: p.dueBack
+            /* T112 — the same sentence, the same formatter. */
+            ? `${who(p)} was due back by ${dateWords(p.dueBack, w.today)}.`
+            : `${who(p)} usually comes every ${plural(p.usualGap ?? 0, "day")}. It's been longer.`,
+        } : noWayIn(p)),
         moneyLine: p.spent12 > 0 ? `${money(p.spent12)} in the last 12 months` : undefined,
         chip: "Hasn't been back", group: "checkin", dismissible: false,
       });
@@ -92,8 +131,10 @@ export function buildCards(m: Model, viewer: "owner" | "staff" | "alloro"): Card
     if (p.isStillQuiet) {
       cards.push({
         id: `still:${p.c.id}`, kind: "not-back", p,
-        move: "checkin", action: `Try ${who(p)} again`,
-        why: `${who(p)} still hasn't been back since you wrote.`,
+        ...(reachable(p) ? {
+          move: "checkin" as const, action: `Try ${who(p)} again`,
+          why: `${who(p)} still hasn't been back since you wrote.`,
+        } : noWayIn(p)),
         chip: "No reply yet", group: "checkin", dismissible: false,
       });
     }
@@ -123,6 +164,18 @@ export function buildCards(m: Model, viewer: "owner" | "staff" | "alloro"): Card
   }
 
   const live = cards.filter((c) => !w.dismissed.includes(c.id));
+
+  /**
+   * T110 (Rev 29) — ⛔ THE MONEY LINE IS REMOVED HERE, NOT HIDDEN ON THE SCREEN.
+   *
+   * These cards carry sentences like "$6,240 quoted" and "$5,115 in the last 12
+   * months", built above without asking who is looking. Three screens then drew
+   * them: Needs you, the Dashboard and People's inline card. ⛔ A COMPONENT
+   * CANNOT UN-SAY A SENTENCE THAT ALREADY HAS THE MONEY IN IT — the only place
+   * this can be fixed once is where the string is made.
+   */
+  if (!canSeeMoney(viewer)) for (const c of live) c.moneyLine = undefined;
+
   // Staff see what was handed to them first.
   if (viewer === "staff") {
     for (const c of live) if (c.p.c.addedBy === w.info.staffName) c.group = "mine";

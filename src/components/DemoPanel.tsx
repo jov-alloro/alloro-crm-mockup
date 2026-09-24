@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Button, Sheet } from "./ui";
 import { Icon } from "./icons";
 import { useUi } from "../lib/ui-context";
+import { dateWords } from "../lib/format";
 import { BUSINESS_KEYS, BUSINESS_LABELS } from "../data/seed";
 import {
   arriveMessage, arriveNewsletter, arrivePayment, askNoEmail, moveClock,
@@ -31,7 +32,16 @@ export function DemoStripe() {
       <div className="flex flex-wrap items-center justify-between gap-2 bg-alloro-navy px-4 py-2 text-white sm:px-8">
         <p className="text-sm">
           <span className="font-semibold">{ui.world.info.name}</span>
-          <span className="ml-2 text-white/70">a demo · no real data · today is {ui.world.today}</span>
+          {/*
+            T112 (Rev 29) — ⛔ THE ONE ISO DATE IN THE PRODUCT, AND IT WAS ON EVERY
+            SCREEN. The review found four date formats; three were product
+            formats disagreeing with each other, and the fourth was this:
+            "today is 2026-09-23", in the stripe that sits above every page.
+            It is demo chrome rather than product data, which is exactly why
+            nobody looked at it. Design §10.5 wants time honest and in the
+            owner's words, and a machine date is neither.
+          */}
+          <span className="ml-2 text-white/70">a demo · no real data · today is {dateWords(ui.world.today, ui.world.today)}</span>
         </p>
         <button
           type="button"

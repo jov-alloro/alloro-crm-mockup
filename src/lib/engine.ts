@@ -2,7 +2,7 @@ import type {
   Consent, Contact, FoundKey, GotKey, TimelineEvent, World,
 } from "../data/types";
 import { packOf, type Pack, type Stage } from "./packs";
-import { addDays, daysBetween, firstName, money, plural, weekday } from "./format";
+import { addDays, dateWords, daysBetween, firstName, money, plural, weekday } from "./format";
 
 /**
  * T2 — the engine. Every status, stage and verdict below is DERIVED from an
@@ -362,7 +362,12 @@ export function whyLine(p: Profile, w: World): string {
   if (open) return `${who} is waiting to hear from you.`;
   if (p.cameBack) return `${who} came back after you reached out.`;
   if (p.isStillQuiet) return `${who} still hasn't been back since you wrote.`;
-  if (p.isQuiet && p.dueBack) return `${who} was due back by ${p.dueBack}.`;
+  /* T112 (Rev 29) — ⛔ THE DATE WAS PRINTED RAW: "was due back by 2026-05-17".
+     It is the only product sentence that showed a machine date, it appears on
+     Needs you and on the Dashboard, and it survived because the value is a plain
+     string and template literals do not complain. Same formatter as every other
+     date on screen now. */
+  if (p.isQuiet && p.dueBack) return `${who} was due back by ${dateWords(p.dueBack, w.today)}.`;
   if (p.isQuiet && p.usualGap)
     return `${who} usually comes every ${plural(p.usualGap, "day")}. It's been longer.`;
   // ⛔ A business has no rhythm of its own — its people carry it — so without

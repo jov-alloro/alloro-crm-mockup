@@ -126,9 +126,14 @@ export function seedWorld(key: BusinessKey, variant: SeedVariant = "full"): Worl
   }
 
   /* ── people ───────────────────────────────────────────────────────────── */
+  /* T114 (Rev 29) — ⛔ one first name, one person, and never the owner's or the
+     staff member's. The set is carried through every draw; reserved holds the
+     two real names in this business. */
+  const usedNames = new Set<string>();
+  const reserved = [owner, staff];
   const made: Contact[] = [];
   for (let i = 0; i < people; i++) {
-    const name = nameAt(i, r);
+    const name = nameAt(i, r, usedNames, reserved);
     const atBusiness = i < bizCount * 2 && businesses.length > 0;
     const c = b.person({
       id: `c${i + 1}`,
@@ -230,10 +235,32 @@ export function seedWorld(key: BusinessKey, variant: SeedVariant = "full"): Worl
   }
 
   // Quotes and bookings, so all five stage chips have something (acceptance A4).
+  const quoteAmounts = new Set<number>();
   for (let i = 0; i < Math.round(plan.quoted * scale); i++) {
     const c = made[10 + i] ?? made[i];
     const date = addDays(TODAY, -(Math.floor(r() * 40) + 2));
-    b.ev({ contactId: c.id, kind: "quote", date, minute: 660, by: owner, amount: Math.round(plan.avg * 1.2), item: plan.items[0] });
+    /*
+      T115 (Rev 29) — ⛔ EVERY OPEN QUOTE WAS THE SAME NUMBER. They were all
+      `avg * 1.2` for `items[0]`, so the review opened Needs you and read
+      "$6,240 quoted" five times down the screen. In a demo about telling
+      customers apart, identical money is the loudest possible tell that nothing
+      behind it is real.
+
+      ⛔ THE ITEM DRIVES THE VALUE, which is what makes it believable rather than
+      merely varied: a bathroom is not a repair visit, and the spread between
+      them is the thing an owner recognises. The jitter is seeded, so the demo is
+      still the same demo every time it loads.
+    */
+    const item = plan.items[i % plan.items.length];
+    const weight = [1.6, 1.15, 0.85, 0.6, 0.35][i % plan.items.length] ?? 1;
+    let amount = Math.round((plan.avg * weight * (0.85 + r() * 0.4)) / 10) * 10;
+    /* ⛔ AND NO TWO MATCH, which the jitter alone did not guarantee: at the small
+       end of a cheap job type two draws can round to the same ten. Measured on
+       Riverside — 22 quotes, 21 distinct values, one pair at $730. Nudging is
+       deterministic, so the demo stays the same demo. */
+    while (quoteAmounts.has(amount)) amount += 10;
+    quoteAmounts.add(amount);
+    b.ev({ contactId: c.id, kind: "quote", date, minute: 660, by: owner, amount, item });
     if (i < Math.round(plan.booked * scale)) {
       b.ev({ contactId: c.id, kind: "booked", date: addDays(date, 3), minute: 660, by: owner });
     }

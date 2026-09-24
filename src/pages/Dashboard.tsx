@@ -1,3 +1,4 @@
+import { canSeeMoney } from "../lib/permissions";
 import { useMemo, type ReactNode } from "react";
 import { useUi } from "../lib/ui-context";
 import { Button, Card, PageSkeleton, Verdict } from "../components/ui";
@@ -27,7 +28,7 @@ import type { IconName } from "../components/icons";
 export default function Dashboard() {
   const ui = useUi();
   const { model, world, cards, viewer } = ui;
-  const showMoney = viewer !== "staff";
+  const showMoney = canSeeMoney(viewer);
   const paymentsDown = !world.feeds.payments.ok;
 
   const stats = useMemo(() => {
@@ -36,9 +37,23 @@ export default function Dashboard() {
     const became = wrote.filter((p) => p.buys.length > 0);
     const cameBack = people.filter((p) => p.cameBack);
     const unanswered = cards.filter((c) => c.kind === "unanswered");
-    const year = people.reduce((s, p) => s + p.spent12, 0);
+    /*
+      T116 (Rev 29) — ⛔ THE NUMBER AND THE BARS CAME FROM DIFFERENT WINDOWS.
+      The headline summed `spent12` — a rolling twelve months — and sat beside a
+      chart of the last SIX. The review measured it: "$390,589" above bars that
+      summed to $142,329. Two true numbers, one card, and no way for a reader to
+      know they were answering different questions.
+      One function now: the bars are the source, and the headline is their sum.
+    */
+    /* ⛔ SIX, NOT TWELVE, AND THE PHONE DECIDED IT. Twelve bars made the
+       Dashboard and Needs you scroll sideways at 375px — A39c caught it. The
+       review allowed either window as long as the number and the bars agree, so
+       the WINDOW shrinks and the HEADLINE is relabelled to match, rather than
+       keeping a grander number that breaks a screen. */
+    const months = moneyByMonth(model, 6);
+    const year = months.reduce((n, pt) => n + pt.value, 0);
     const slipping = [...people].filter((p) => p.isQuiet && p.spent12 > 0).sort((a, b) => b.spent12 - a.spent12)[0];
-    return { total: people.length, wrote: wrote.length, became: became.length, cameBack, unanswered, year, slipping };
+    return { total: people.length, wrote: wrote.length, became: became.length, cameBack, unanswered, year, months, slipping };
   }, [model, cards]);
 
   /** Every chart's points, built from the same events every other screen reads. */
@@ -47,7 +62,8 @@ export default function Dashboard() {
     source: bySource(model),
     split: wroteInSplit(model),
     items: topItems(model),
-    months: moneyByMonth(model),
+    /* T116 — the chart draws the very array the headline added up. */
+    months: moneyByMonth(model, 6),
   }), [model]);
 
   if (ui.loading) return <PageSkeleton rows={4} />;
@@ -62,7 +78,7 @@ export default function Dashboard() {
         <Verdict>Nothing to show yet.</Verdict>
         <div className="grid gap-4 sm:grid-cols-2">
           <Tile title="Who came from where"><p className="t-meta">People appear when someone writes in or pays.</p></Tile>
-          <Tile title="Who came back" span={1}><p className="t-meta">Alloro learns a customer's rhythm after a few purchases.</p></Tile>
+          <Tile title="Back after you reached out" span={1}><p className="t-meta">Alloro learns a customer's rhythm after a few purchases.</p></Tile>
         </div>
       </div>
     );
@@ -184,9 +200,26 @@ export default function Dashboard() {
           </Next>
         </Tile>
 
-        <Tile title="Who came back" span={1}>
+        {/*
+          T113 (Rev 29) — ⛔ THE SAME WORDS SHOWED TWO NUMBERS: this tile read 5
+          and "Where everyone stands" read "came back 7".
+
+          They are not the same measure and collapsing them would have lost the
+          useful one. This tile counts people who BOUGHT AGAIN AFTER YOU REACHED
+          OUT — a check-in, then a purchase, inside thirty days. That is the one
+          worth a thank-you, and it is what the next step below does. The ring
+          counts the STATUS "Came back", which a person can hold for reasons this
+          tile does not care about — and which the status rules can overwrite,
+          since `isQuiet` is applied after `cameBack` in makeProfile.
+
+          ⛔ SO THE TILE STOPS BORROWING THE STATUS WORDS. "Came back" now means
+          exactly one thing on every screen: the status. This tile names its own
+          narrower thing. Renaming the tile was the smaller change than renaming
+          a status that People filters by and chips display.
+        */}
+        <Tile title="Back after you reached out" span={1}>
           {stats.cameBack.length === 0 ? (
-            <p className="t-meta">Nobody has come back this month.</p>
+            <p className="t-meta">Nobody has bought again after a check-in this month.</p>
           ) : (
             <>
               <p className="t-hero">{stats.cameBack.length}</p>
@@ -194,7 +227,7 @@ export default function Dashboard() {
             </>
           )}
           <Next icon="thanks" onClick={() => ui.go("#/needs")}>
-            {stats.cameBack.length ? `Say thanks to ${stats.cameBack[0].c.name.split(" ")[0]}` : "See what needs you"}
+            {stats.cameBack.length ? `Say thanks to ${stats.cameBack[0].c.name}` : "See what needs you"}
           </Next>
         </Tile>
 
@@ -210,7 +243,7 @@ export default function Dashboard() {
         </Tile>
 
         {showMoney ? (
-          <Tile title="Money this year" span={2}>
+          <Tile title="Money in the last 6 months" span={2}>
             {paymentsDown ? (
               <p className="t-body" data-testid="money-unknown">Alloro can't see your payments, so this is unknown.</p>
             ) : (

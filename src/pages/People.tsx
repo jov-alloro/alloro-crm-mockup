@@ -1,3 +1,4 @@
+import { canSeeMoney } from "../lib/permissions";
 import { useEffect, useMemo, useState } from "react";
 import { useUi } from "../lib/ui-context";
 import { Button, Card, Chip, EmptyState, PageSkeleton, Sheet, Verdict } from "../components/ui";
@@ -130,7 +131,7 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
     }
   }, [fKey, fValue]);
 
-  const showMoney = viewer !== "staff";
+  const showMoney = canSeeMoney(viewer);
 
   /** Everything the chips filter from — hidden people only when asked for. */
   const base = useMemo(
@@ -353,7 +354,19 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
   const verdict =
     total === 0
       ? "Nobody here yet."
-      : `${plural(total, pack.customer, pack.customers)} in your list.`;
+      /*
+       * T111 (Rev 29) — ⛔ "151 CLIENTS IN YOUR LIST" COUNTED 59 NEW INQUIRIES.
+       *
+       * The pack renames the CUSTOMER word per business — client, customer,
+       * patient — and the whole-list headline borrowed it. But the list is not a
+       * list of clients: fifty-nine of those people have only ever asked a
+       * question, and "Client" is a status on this very screen that 67 of them
+       * hold. The headline was contradicting a column next to it.
+       *
+       * The list says PEOPLE. The pack word stays where it is true: on the
+       * status, and on "Search clients", which is what the owner is doing.
+       */
+      : `${plural(total, "person", "people")} in your list.`;
 
   return (
     <div>
@@ -725,7 +738,8 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
               hides how much of itself you are looking at. */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-3 py-2">
             <p className="t-meta" data-testid="page-count">
-              {plural(rows.length, pack.customer, pack.customers)} · showing {from + 1}–{Math.min(from + PAGE_SIZE, rows.length)}
+              {/* T111 — the footer counts the same thing the headline does. */}
+              {plural(rows.length, "person", "people")} · showing {from + 1}–{Math.min(from + PAGE_SIZE, rows.length)}
             </p>
             {pages > 1 ? (
               <div className="flex items-center gap-2">
