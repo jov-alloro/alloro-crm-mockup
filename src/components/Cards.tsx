@@ -20,31 +20,59 @@ function cardIcon(kind: CardKind): IconName {
 }
 
 /**
- * ⛔ ONE card, inline, at the top of the tab, under the page header (spec R9).
- * Never a pop-up, never a stack, never a rail. A card that covers what the owner
- * came to do is the thing they learn to dismiss by week two.
+ * Rev 33 — "NEEDS YOU" IS A TASK RECOMMENDATION, NOT A PLACE.
+ *
+ * Jov: it becomes cards like Alloro's action card, shown on the Dashboard and
+ * the other customer screens, top three only. There is no tab, no section and
+ * no full list any more (that reverses Rev 32's section). Three is the whole
+ * point: a list of 34 is a backlog, and a backlog is what people stop opening.
+ *
+ * ⛔ THE FIRST CARD HOLDS THE SCREEN'S ONE PRIMARY (Design §4.3) unless the
+ * screen already has its own leading action, which is what `quiet` says —
+ * People leads with "Add by hand".
  */
-export function InlineCard({ card, quiet }: { card: CardModel; quiet?: boolean }) {
+export const TOP_TASKS = 3;
+
+export function TopTasks({ quiet }: { quiet?: boolean }) {
   const ui = useUi();
+  const top = ui.cards.slice(0, TOP_TASKS);
+  const paymentsDown = !ui.world.feeds.payments.ok;
+  const formsDown = !ui.world.feeds.forms.ok;
+  if (top.length === 0 && !paymentsDown && !formsDown) return null;
   return (
-    <div className="mb-4" data-testid="inline-card" data-card-id={card.id}>
-      {/* ⛔ `quiet` steps this card's button down to secondary, for a screen whose
-          own leading action holds the primary. Design §4.3 caps the SCREEN at one
-          primary; which one it is, is a judgement per screen. */}
-      <CardRow card={card} inline primary={!quiet} />
-      <button
-        type="button"
-        onClick={() => ui.go("#/dashboard/needs")}
-        className="t-meta mt-1 underline underline-offset-2"
-        data-testid="inline-card-seeall"
-      >
-        See everything that needs you
-      </button>
-    </div>
+    <section data-testid="top-tasks" aria-label="Do these first" className="mb-6">
+      {/* ⛔ Nobody is flagged while a feed is down (acceptance A26). These notices
+          used to sit above the Needs you list; they live with the recommendations
+          now, because they explain why the recommendations are fewer. */}
+      {paymentsDown ? (
+        <Card className="mb-3 border-amber">
+          <p className="t-body font-semibold" data-testid="feed-card">
+            Alloro isn't receiving your payments since {ui.world.feeds.payments.downSince}.
+          </p>
+          <p className="t-meta mt-1">Nobody is flagged as hasn't been back while this lasts, so there are fewer things here than usual.</p>
+        </Card>
+      ) : null}
+      {formsDown ? (
+        <Card className="mb-3 border-amber">
+          <p className="t-body font-semibold">Alloro isn't receiving website messages right now.</p>
+          <p className="t-meta mt-1">Nothing is flagged as unanswered while this lasts. Check your own inbox.</p>
+        </Card>
+      ) : null}
+      {top.length > 0 ? (
+        <>
+          <h2 className="eyebrow mb-2">
+            {ui.cards.length > TOP_TASKS ? `Do these first · ${TOP_TASKS} of ${ui.cards.length}` : "Do these first"}
+          </h2>
+          <div className="space-y-3">
+            {top.map((c, i) => <CardRow key={c.id} card={c} task primary={!quiet && i === 0} />)}
+          </div>
+        </>
+      ) : null}
+    </section>
   );
 }
 
-export function CardRow({ card, n, inline, primary = true }: { card: CardModel; n?: number; inline?: boolean; primary?: boolean }) {
+export function CardRow({ card, n, task, primary = true }: { card: CardModel; n?: number; task?: boolean; primary?: boolean }) {
   const ui = useUi();
   const p = card.p;
 
@@ -95,7 +123,7 @@ export function CardRow({ card, n, inline, primary = true }: { card: CardModel; 
   };
 
   return (
-    <Card className={inline ? "border-amber" : ""}>
+    <Card className={task ? "!border-alloro-orange/30 !bg-alloro-orange/[0.07]" : ""}>
       {/* A card is identified by its person, not by a first name: the demo has
           more than one Owen, and a check that matched on "Owen" matched the
           wrong card. */}
@@ -109,7 +137,9 @@ export function CardRow({ card, n, inline, primary = true }: { card: CardModel; 
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2">
             {n ? <span className="eyebrow" data-testid="card-number">{n}</span> : null}
-            <Chip tone={card.kind === "came-back" ? "plain" : "amber"}>{card.chip}</Chip>
+            {task
+              ? <span className="eyebrow text-alloro-orange-text-safe" data-testid="card-chip">{card.chip}</span>
+              : <Chip tone={card.kind === "came-back" ? "plain" : "amber"}>{card.chip}</Chip>}
           </div>
           {/* Design §6.1 — the sentence, before any number.
               ⛔ T95: the sentence IS the keyboard path into the card. It carries no
@@ -120,7 +150,7 @@ export function CardRow({ card, n, inline, primary = true }: { card: CardModel; 
             type="button"
             data-testid="card-why"
             onClick={() => ui.go(view)}
-            className="t-body block text-left font-semibold underline-offset-4 hover:underline"
+            className={`${task ? "t-verdict" : "t-body font-semibold"} block text-left underline-offset-4 hover:underline`}
           >
             {card.why}
           </button>

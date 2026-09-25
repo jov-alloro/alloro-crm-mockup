@@ -87,7 +87,8 @@ export function isTab(route: Route): boolean {
  */
 const REMEMBERS: Partial<Record<Route["name"], Route["name"][]>> = {
   person: ["thread", "dashboard", "conversation", "spam", "email-group"],
-  thread: ["dashboard"],
+  /* Rev 33 — People carries the top-three cards too, and a card can open a thread. */
+  thread: ["dashboard", "people"],
 };
 
 export function upTarget(route: Route, from?: Route | null, fromLabel?: string): UpTarget | null {
@@ -157,8 +158,9 @@ function hrefOf(r: Route): string | null {
        verdict cards live IN the Dashboard now, so "Back" from a person or a
        thread must return to the list you were working down, not the top of the
        page. */
-    case "dashboard": return r.section ? `#/dashboard/${r.section}` : "#/dashboard";
+    case "dashboard": return "#/dashboard";
     case "conversation": return "#/conversation";
+    case "people": return "#/people";
     case "email-group": return "#/people/email";
     default: return null;
   }

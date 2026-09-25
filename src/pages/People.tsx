@@ -5,11 +5,10 @@ import { Button, Card, Chip, EmptyState, PageSkeleton, Sheet, Verdict } from "..
 import { AddByHand } from "./PersonPage";
 import { Icon } from "../components/icons";
 import { Menu, type MenuOption } from "../components/Menu";
-import { InlineCard } from "../components/Cards";
+import { TopTasks } from "../components/Cards";
 import { FOUND_LABEL, GOT_LABEL, statusLabel, type Profile } from "../lib/engine";
 import { STAGES, type Stage } from "../lib/packs";
 import { plural, relativeDay } from "../lib/format";
-import { inlineCard } from "../lib/cards";
 import type { GotKey, FoundKey } from "../data/types";
 import type { PeopleFilter } from "../lib/router";
 
@@ -359,8 +358,6 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
   if (ui.loading) return <PageSkeleton rows={6} search />;
 
   const feedDown = !world.feeds.payments.ok;
-  const visibleIds = new Set(rows.map((r) => r.c.id));
-  const card = inlineCard(ui.cards, "people", visibleIds);
 
   const total = model.visible.length;
   const verdict =
@@ -386,7 +383,7 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
         {verdict}
       </Verdict>
 
-      {card ? <InlineCard card={card} quiet /> : null}
+      <TopTasks quiet />
 
       {/*
         T63 — ⛔ THE ADD FORM OPENS OVER THE LIST, so the owner never loses their

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { AREAS, areaOf, headerFor, type AreaKey } from "../lib/areas";
 import { CONTAINER, upTarget, type UpTarget } from "../lib/layout";
 import { Icon } from "./icons";
@@ -117,39 +117,22 @@ export function Shell({
   );
 }
 
+/**
+ * Rev 33 — THE BUBBLE IS GONE; THE RAIL IS ALLORO'S OWN NESTED STYLE.
+ *
+ * Jov: "we will use this original sidebar style, so our Customers tab's
+ * contents is the Dashboard, and its two sub menus are People and Conversation."
+ * Alloro's real sidebar draws a child as the same row indented, with an L in a
+ * gutter (frontend Sidebar.tsx, recorded in reference/alloro-sidebar-2026-09-25.tsx).
+ * That is copied here, so there is no flyout, no hover timer, no stacking-context
+ * trap and no "here" marker: the tree is always open and the highlighted row IS
+ * where you are.
+ */
 function Rail({ current, go }: { current: AreaKey | null; go: (href: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const wrap = useRef<HTMLDivElement>(null);
-  const btn = useRef<HTMLButtonElement>(null);
-  const closeTimer = useRef<number | undefined>(undefined);
-  const skipFocusOpen = useRef(false);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
-        setOpen(false);
-        skipFocusOpen.current = true;
-        btn.current?.focus();
-        window.setTimeout(() => { skipFocusOpen.current = false; }, 0);
-      }
-    };
-    const onDown = (e: MouseEvent) => {
-      if (open && wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("mousedown", onDown);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("mousedown", onDown);
-    };
-  }, [open]);
-
-  const hold = () => { window.clearTimeout(closeTimer.current); setOpen(true); };
-  const holdFromFocus = () => { if (!skipFocusOpen.current) hold(); };
-  const release = () => {
-    window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => setOpen(false), 200);
-  };
+  const children = AREAS.filter((a) => a.key !== "dashboard");
+  const dash = AREAS.find((a) => a.key === "dashboard")!;
+  const parentActive = current === "dashboard";
+  const inside = current !== null;
 
   return (
     <div className="relative z-30 hidden w-60 shrink-0 self-start md:block sticky top-0 h-screen bg-alloro-sidebg text-white">
@@ -157,83 +140,62 @@ function Rail({ current, go }: { current: AreaKey | null; go: (href: string) => 
         <p className="eyebrow text-white/50">Alloro</p>
       </div>
 
-      <nav className="px-3">
-        <div ref={wrap} className="relative" onMouseEnter={hold} onMouseLeave={release}>
-          <button
-            ref={btn}
-            type="button"
-            data-testid="rail-customers"
-            aria-haspopup="menu"
-            aria-expanded={open}
-            aria-label="Customers"
-            onFocus={holdFromFocus}
-            onClick={hold}
-            className={[
-              "nav-row tap group",
-              current
-                ? "bg-alloro-sidehover text-white shadow-sm border-white/5"
-                : "text-white/40 hover:text-white hover:bg-alloro-sidehover",
-            ].join(" ")}
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className={`shrink-0 ${current ? "text-alloro-orange" : "opacity-40 group-hover:opacity-100"}`}>
-                <Icon name={current ?? "people"} />
-              </span>
-              <span className={`nav-label ${current ? "text-white" : "group-hover:text-white/80"}`}>Customers</span>
+      <nav className="px-3" aria-label="Customers">
+        <button
+          type="button"
+          data-testid="rail-customers"
+          data-current={parentActive ? "true" : undefined}
+          aria-current={parentActive ? "page" : undefined}
+          aria-label="Customers"
+          onClick={() => go(dash.href)}
+          className={[
+            "nav-row tap group",
+            parentActive
+              ? "bg-alloro-sidehover text-white shadow-sm border-white/5"
+              : "text-white/40 hover:text-white hover:bg-alloro-sidehover",
+          ].join(" ")}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span className={`shrink-0 ${inside ? "text-alloro-orange" : "opacity-40 group-hover:opacity-100"}`}>
+              <Icon name="people" />
             </span>
-          </button>
+            <span className={`nav-label ${inside ? "text-white" : "group-hover:text-white/80"}`}>Customers</span>
+          </span>
+        </button>
 
-          {open ? (
-            /* 20px gap from the rail (Jov, 2026-09-24 — 12px read as almost
-               touching). ⛔ THE GAP IS PADDING ON THIS WRAPPER, NOT A MARGIN, so
-               it stays inside the bubble's own hover area: crossing it with the
-               pointer never loses the bubble. Widening a margin instead would
-               open a dead strip that closes the menu halfway to it. */
-            <div
-              data-testid="bubble"
-              role="menu"
-              aria-label="Customers areas"
-              className="absolute left-full top-0 z-50 pl-5"
-            >
-              <div className="relative w-56 rounded-2xl bg-alloro-sidehover p-2 shadow-premium ring-1 ring-white/10">
+        <div className="mt-1.5 space-y-1.5">
+          {children.map((a) => {
+            const on = current === a.key;
+            return (
+              <div key={a.key} className="relative pl-7">
+                {/* Stem down, elbow right — Alloro's own connector. Decoration only. */}
                 <span
                   aria-hidden="true"
-                  data-testid="bubble-caret"
-                  className="absolute -left-1.5 top-5 h-3 w-3 rotate-45 bg-alloro-sidehover"
+                  className="pointer-events-none absolute -top-2 left-3 h-[calc(50%+0.5rem)] w-4 rounded-bl-[7px] border-b border-l border-white/25"
                 />
-                {AREAS.map((a) => (
-                  <button
-                    key={a.key}
-                    type="button"
-                    role="menuitem"
-                    data-testid={`bubble-${a.key}`}
-                    data-current={current === a.key ? "true" : undefined}
-                    onClick={() => { go(a.href); setOpen(false); }}
-                    className={[
-                      "nav-row tap group",
-                      current === a.key
-                        ? "bg-white/10 text-white border-white/5"
-                        : "text-white/40 hover:text-white hover:bg-white/5",
-                    ].join(" ")}
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className={`shrink-0 ${current === a.key ? "text-alloro-orange" : "opacity-40 group-hover:opacity-100"}`}>
-                        <Icon name={a.key} />
-                      </span>
-                      {/* ⛔ Label only. The one-line subtext is gone from this
-                          menu (decision d); the page header still carries it. */}
-                      <span className={`nav-label ${current === a.key ? "text-white" : "group-hover:text-white/80"}`}>
-                        {a.label}
-                      </span>
+                <button
+                  type="button"
+                  data-testid={`rail-${a.key}`}
+                  data-current={on ? "true" : undefined}
+                  aria-current={on ? "page" : undefined}
+                  onClick={() => go(a.href)}
+                  className={[
+                    "nav-row tap group",
+                    on
+                      ? "bg-alloro-sidehover text-white shadow-sm border-white/5"
+                      : "text-white/40 hover:text-white hover:bg-alloro-sidehover",
+                  ].join(" ")}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className={`shrink-0 ${on ? "text-alloro-orange" : "opacity-40 group-hover:opacity-100"}`}>
+                      <Icon name={a.key} />
                     </span>
-                    {current === a.key ? (
-                      <span className="shrink-0 text-[11px] font-semibold text-white/50">here</span>
-                    ) : null}
-                  </button>
-                ))}
+                    <span className={`nav-label ${on ? "text-white" : "group-hover:text-white/80"}`}>{a.label}</span>
+                  </span>
+                </button>
               </div>
-            </div>
-          ) : null}
+            );
+          })}
         </div>
 
         {/* Design §13.4 — no counts and no badges in the navigation. */}

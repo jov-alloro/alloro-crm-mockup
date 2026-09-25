@@ -129,6 +129,7 @@ export default function App() {
       }
     } else if (cameFrom?.name === "dashboard") label = "Dashboard";
     else if (cameFrom?.name === "conversation") label = "Conversation";
+    else if (cameFrom?.name === "people") label = "People";
     else if (cameFrom?.name === "spam") label = "Hidden as spam";
     else if (cameFrom?.name === "email-group") label = "the email";
     return upTarget(route, cameFrom, label);

@@ -3,10 +3,9 @@ import { useUi } from "../lib/ui-context";
 import { Button, Card, Chip, EmptyState, PageSkeleton, Placeholder, Verdict } from "../components/ui";
 import { Icon } from "../components/icons";
 import { Menu } from "../components/Menu";
-import { InlineCard } from "../components/Cards";
+import { TopTasks } from "../components/Cards";
 import { RULES, canEmail, pastAlarm, type Profile } from "../lib/engine";
 import { daysBetween, listDate, plural } from "../lib/format";
-import { inlineCard } from "../lib/cards";
 import type { TimelineEvent } from "../data/types";
 
 /**
@@ -97,7 +96,6 @@ export default function Conversation() {
   if (ui.loading) return <PageSkeleton rows={4} />;
 
   const openCount = all.filter((r) => r.open).length;
-  const card = inlineCard(ui.cards, "conversation");
   const formsDown = !world.feeds.forms.ok;
   const filtered = state !== "all" || q.trim().length > 0;
 
@@ -111,7 +109,7 @@ export default function Conversation() {
             : `${openCount} ${openCount === 1 ? "person is" : "people are"} waiting to hear from you.`}
       </Verdict>
 
-      {card ? <InlineCard card={card} /> : null}
+      <TopTasks />
 
       {formsDown ? (
         <Card className="mb-4 border-amber">
@@ -209,7 +207,7 @@ export default function Conversation() {
             <Card className="p-0" data-testid="inbox">
               <ul>
                 {rows.slice(0, 60).map((r, i) => (
-                  <MessageRow key={r.e.id} r={r} first={i === 0 && r.open} lead={i === 0 && r.open && !card} />
+                  <MessageRow key={r.e.id} r={r} first={i === 0 && r.open} lead={i === 0 && r.open && ui.cards.length === 0} />
                 ))}
               </ul>
             </Card>

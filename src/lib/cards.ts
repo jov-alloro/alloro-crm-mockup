@@ -193,24 +193,3 @@ export function buildCards(m: Model, viewer: "owner" | "staff" | "alloro"): Card
       waitedSince(a).localeCompare(waitedSince(b)),
   );
 }
-
-export function groupCards(cards: Card[]): { key: GroupKey; title: string; hint: string; items: { card: Card; n: number }[] }[] {
-  const groups = GROUPS.map((g) => ({ ...g, items: [] as { card: Card; n: number }[] }));
-  for (const c of cards) groups.find((g) => g.key === c.group)!.items.push({ card: c, n: 0 });
-  let n = 0;
-  for (const g of groups) for (const it of g.items) it.n = ++n;
-  return groups.filter((g) => g.items.length > 0);
-}
-
-/**
- * The ONE inline card for a tab (spec R9). ⛔ Never a stack, never a pop-up.
- *
- * ⛔ REV 32: THERE IS NO "dashboard" CASE ANY MORE. The Dashboard holds the whole
- * list as a section, and one card above the list it belongs to is the same card
- * twice. The answer to "where do the rest live" is now "the Dashboard".
- */
-export function inlineCard(cards: Card[], tab: "people" | "conversation", visibleIds?: Set<string>): Card | undefined {
-  if (tab === "conversation") return cards.find((c) => c.kind === "unanswered");
-  if (visibleIds) return cards.find((c) => visibleIds.has(c.p.c.id));
-  return cards[0];
-}

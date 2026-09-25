@@ -1,8 +1,8 @@
 import { canSeeMoney } from "../lib/permissions";
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useUi } from "../lib/ui-context";
 import { Button, Card, PageSkeleton, Verdict } from "../components/ui";
-import { NEEDS_ANCHOR, NeedsSection } from "../components/NeedsSection";
+import { TopTasks } from "../components/Cards";
 import { Ring, SpreadBars, TileGrid } from "../components/Charts";
 import { bySource, foundStory, topItems, wroteInSplit } from "../lib/charts";
 import { statusLabel } from "../lib/engine";
@@ -58,26 +58,6 @@ export default function Dashboard() {
     items: topItems(model),
   }), [model]);
 
-  /* ⛔ HOOKS BEFORE THE EARLY RETURN. The first version of this effect sat below
-     the loading return; React then saw a different number of hooks on the loading
-     render and the loaded one and unmounted the whole page. tsc cannot see that —
-     the acceptance suite did, as blank screens across a dozen items. */
-  /**
-   * T125 (Rev 32) — ⛔ TWO WAYS IN, ONE PLACE TO LAND. An address
-   * (`#/dashboard/needs`, and the old `#/needs` that redirects to it) and the
-   * buttons on this page both end at the section. The button ALSO scrolls
-   * directly, because pressing it while the bar already reads
-   * `#/dashboard/needs` changes nothing and fires no address event.
-   */
-  const jumpToNeeds = () => {
-    ui.go("#/dashboard/needs");
-    scrollToNeeds();
-  };
-  const wantsNeeds = ui.route.name === "dashboard" && ui.route.section === "needs";
-  useEffect(() => {
-    if (wantsNeeds && !ui.loading) scrollToNeeds();
-  }, [wantsNeeds, ui.loading]);
-
   if (ui.loading) return <PageSkeleton rows={4} />;
 
   if (stats.total === 0) {
@@ -97,11 +77,8 @@ export default function Dashboard() {
       <Verdict sub={`${plural(stats.total, ui.model.pack.customer, ui.model.pack.customers)} in your list.`}>
         {cards.length === 0 ? "Nothing needs you this week." : `${plural(cards.length, "thing")} need${cards.length === 1 ? "s" : ""} you this week.`}
       </Verdict>
-      {cards.length > 0 ? (
-        <button type="button" onClick={jumpToNeeds} className="t-meta -mt-3 mb-4 underline underline-offset-2" data-testid="jump-needs">
-          See them below
-        </button>
-      ) : null}
+
+      <TopTasks />
 
       {/*
         T44 (Rev 9) — ⛔ THE GRID TILES COMPLETELY, AT EVERY COLUMN COUNT.
@@ -237,8 +214,11 @@ export default function Dashboard() {
               <p className="t-meta">came back after you reached out.</p>
             </>
           )}
-          <Next icon="thanks" onClick={jumpToNeeds}>
-            {stats.cameBack.length ? `Say thanks to ${stats.cameBack[0].c.name}` : "See what needs you"}
+          <Next
+            icon={stats.cameBack.length ? "thanks" : "people"}
+            onClick={() => ui.go(stats.cameBack.length ? `#/p/${stats.cameBack[0].c.id}` : "#/people")}
+          >
+            {stats.cameBack.length ? `Say thanks to ${stats.cameBack[0].c.name}` : "See your list"}
           </Next>
         </Tile>
 
@@ -343,18 +323,8 @@ export default function Dashboard() {
           <Next icon="people" onClick={() => ui.go("#/people")}>See them in your list</Next>
         </Tile>
       </div>
-
-      <NeedsSection />
     </div>
   );
-}
-
-/** Scroll and hand focus to the section, so a keyboard user lands where the eye does. */
-function scrollToNeeds() {
-  const el = document.getElementById(NEEDS_ANCHOR);
-  if (!el) return;
-  el.scrollIntoView({ block: "start" });
-  el.focus({ preventScroll: true });
 }
 
 /** Kept here rather than in charts.ts because only this screen needs the pack word. */

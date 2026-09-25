@@ -35,7 +35,7 @@ export type Route =
   | { name: "conversation" }
   | { name: "thread"; id: string }
   | { name: "spam" }
-  | { name: "dashboard"; section?: "needs" }
+  | { name: "dashboard" }
   | { name: "settings" }
   | { name: "team" };
 
@@ -43,9 +43,10 @@ export const HOME = "#/people";
 
 /**
  * T125 (Rev 32) — `redirect` is set when an address is OLD but still means
- * something. `#/needs` was the fourth tab until the verdict cards moved into
- * the Dashboard; a bookmark to it must land on the section that replaced it,
- * and the bar must say so (Design §5.3), rather than fall through to People.
+ * something. `#/needs` was the fourth tab, then a Dashboard section (Rev 32),
+ * and since Rev 33 the cards are a top-three block on the Dashboard. A bookmark
+ * to either old address lands on the Dashboard and the bar says so (Design
+ * §5.3), rather than falling through to People.
  */
 export function parse(hash: string): { route: Route; known: boolean; redirect?: string } {
   const h = hash.replace(/^#\/?/, "").replace(/\/$/, "");
@@ -82,9 +83,11 @@ export function parse(hash: string): { route: Route; known: boolean; redirect?: 
       if (b === "spam") return { route: { name: "spam" }, known: true };
       return { route: { name: "thread", id: b }, known: true };
     case "needs":
-      return { route: { name: "dashboard", section: "needs" }, known: true, redirect: "#/dashboard/needs" };
+      return { route: { name: "dashboard" }, known: true, redirect: "#/dashboard" };
     case "dashboard":
-      if (b === "needs") return { route: { name: "dashboard", section: "needs" }, known: true };
+      /* Rev 33 — `#/dashboard/needs` existed for one round (Rev 32). Anybody who
+         bookmarked it lands on the Dashboard, where the top three cards live. */
+      if (b === "needs") return { route: { name: "dashboard" }, known: true, redirect: "#/dashboard" };
       return { route: { name: "dashboard" }, known: true };
     case "settings":
       if (b === "team") return { route: { name: "team" }, known: true };
@@ -110,7 +113,7 @@ export function href(route: Route): string {
     case "conversation": return "#/conversation";
     case "thread": return `#/conversation/${route.id}`;
     case "spam": return "#/conversation/spam";
-    case "dashboard": return route.section ? `#/dashboard/${route.section}` : "#/dashboard";
+    case "dashboard": return "#/dashboard";
     case "settings": return "#/settings";
     case "team": return "#/settings/team";
   }
