@@ -157,7 +157,7 @@ function Rail({ current, go }: { current: AreaKey | null; go: (href: string) => 
         >
           <span className="flex min-w-0 items-center gap-2">
             <span className={`shrink-0 ${inside ? "text-alloro-orange" : "opacity-40 group-hover:opacity-100"}`}>
-              <Icon name="people" />
+              <Icon name="customers" />
             </span>
             <span className={`nav-label ${inside ? "text-white" : "group-hover:text-white/80"}`}>Customers</span>
           </span>

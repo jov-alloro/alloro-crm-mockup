@@ -1,3 +1,4 @@
+import { Menu } from "../components/Menu";
 import { useEffect, useMemo, useState } from "react";
 import { useUi } from "../lib/ui-context";
 import {
@@ -286,15 +287,18 @@ function Mapper({ preset }: { preset: PresetKey }) {
                     <td className="px-3 py-2 font-semibold">{h || `(column ${i + 1})`}</td>
                     <td className="px-3 py-2 t-meta">{body[0]?.[i] ?? ""}</td>
                     <td className="px-3 py-2">
-                      <select
+                      <Menu
+                        id={`map-${i}`}
+                        label={map[i] ? (FIELDS.find((f) => f.key === map[i])?.label ?? "Keep as a note") : "Keep as a note"}
+                        ariaLabel={`What "${h || `column ${i + 1}`}" is`}
                         value={map[i] ?? ""}
-                        data-testid={`map-${i}`}
-                        onChange={(e) => setField(i, e.target.value as FieldKey | "")}
-                        className="tap rounded-lg border border-line-medium px-2 text-sm"
-                      >
-                        <option value="">Keep as a note</option>
-                        {FIELDS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
-                      </select>
+                        options={[{ value: "", label: "Keep as a note" }, ...FIELDS.map((f) => ({ value: f.key, label: f.label }))]}
+                        onChange={(v) => setField(i, v as FieldKey | "")}
+                        caret="menu"
+                        on={false}
+                        field
+                        triggerClass="tap flex items-center justify-between gap-2 rounded-lg border border-line-medium bg-alloro-surface px-2 text-sm normal-case tracking-normal text-alloro-navy hover:border-alloro-navy"
+                      />
                     </td>
                   </tr>
                 ))}

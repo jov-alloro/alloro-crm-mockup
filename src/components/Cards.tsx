@@ -107,7 +107,7 @@ function TaskCard({ card }: { card: CardModel }) {
               type="button"
               data-testid="card-why"
               onClick={() => ui.go(view)}
-              className="block text-left underline-offset-4 hover:underline"
+              className="block text-left"
             >
               {card.why}
             </button>

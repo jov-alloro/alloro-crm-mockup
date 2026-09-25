@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./icons";
+import { Menu } from "./Menu";
 
 /** Shared primitives. Design §12.3 — every control clears 44px. */
 
@@ -187,7 +188,14 @@ export function Sheet({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-alloro-navy/40 p-0 sm:p-6">
+    /* Rev 35 — a press on the dim area outside the sheet closes it. `target === currentTarget`
+       is the whole guard: a press INSIDE the sheet, or on a menu list (which is portalled to
+       the body but still bubbles here through React), has a different target and does nothing. */
+    <div
+      data-testid="sheet-backdrop"
+      onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-alloro-navy/40 p-0 sm:p-6"
+    >
       <div
         ref={ref}
         tabIndex={-1}
@@ -403,26 +411,36 @@ export function Field({
   );
 }
 
+/**
+ * Rev 35 — ⛔ NO NATIVE <select> ANYWHERE. Jov: "do not use this style of dropdown,
+ * use the style like Alloro." The browser's own list (a blue highlight, the system
+ * font, a square grey box) is the one control the app did not draw, so it was the
+ * one that looked foreign. Every form choice now goes through the same Menu the
+ * People headers already use, dressed as a field.
+ */
 export function Select({
   label, value, onChange, options, testId,
 }: {
   label: string; value: string; onChange: (v: string) => void;
   options: { value: string; label: string }[]; testId?: string;
 }) {
+  const shown = options.find((o) => o.value === value)?.label ?? "";
   return (
-    <label className="block mb-3">
+    <div className="block mb-3">
       <span className="eyebrow block mb-1">{label}</span>
-      <select
+      <Menu
+        id={testId ?? `select-${label.toLowerCase().replace(/\W+/g, "-")}`}
+        label={shown}
+        ariaLabel={label}
         value={value}
-        data-testid={testId}
-        onChange={(e) => onChange(e.target.value)}
-        className="tap w-full rounded-xl border border-line-medium bg-alloro-surface px-3.5 text-base transition-colors focus:border-alloro-orange"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </label>
+        options={options}
+        onChange={onChange}
+        caret="menu"
+        on={false}
+        field
+        triggerClass="tap flex w-full items-center justify-between gap-2 rounded-xl border border-line-medium bg-alloro-surface px-3.5 text-left text-base normal-case tracking-normal text-alloro-navy transition-colors hover:border-alloro-navy focus:border-alloro-orange"
+      />
+    </div>
   );
 }
 

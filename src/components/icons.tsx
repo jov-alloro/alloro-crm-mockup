@@ -2,6 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   LayoutDashboardIcon,
   UserMultiple02Icon,
+  ContactBookIcon,
   BubbleChatIcon,
   Settings01Icon,
   Analytics01Icon,
@@ -52,6 +53,8 @@ import {
 const ICONS = {
   // navigation — the four tabs and the rail
   dashboard: LayoutDashboardIcon,
+  /* Rev 35 — Customers and People were the same glyph one row apart in the sidebar. */
+  customers: ContactBookIcon,
   people: UserMultiple02Icon,
   conversation: BubbleChatIcon,
   settings: Settings01Icon,

@@ -46,7 +46,7 @@ export type MenuOption = {
 const OPENED = "alloro-menu-opened";
 
 export function Menu({
-  id, label, ariaLabel, value, options, onChange, caret, on, triggerClass,
+  id, label, ariaLabel, value, options, onChange, caret, on, triggerClass, field,
 }: {
   id: string;
   /** What the header reads when the menu is shut. */
@@ -65,6 +65,8 @@ export function Menu({
    * what keeps that row reading as a label strip rather than a form.
    */
   triggerClass?: string;
+  /** Rev 35 — a FORM FIELD: the trigger keeps exactly the class it is given, and the label fills it. */
+  field?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [at, setAt] = useState(() => Math.max(0, options.findIndex((o) => o.value === value)));
@@ -223,11 +225,13 @@ export function Menu({
         onKeyDown={(e) => {
           if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") { e.preventDefault(); openNow(); }
         }}
-        className={triggerClass
+        className={field
+          ? (triggerClass ?? "")
+          : triggerClass
           ? `${triggerClass} ${on ? "border-alloro-navy text-alloro-navy" : "border-line-soft text-ink-muted-text-safe"}`
           : `tap inline-flex items-center gap-1 whitespace-nowrap ${on ? "text-alloro-navy" : ""}`}
       >
-        <span>{label}</span>
+        <span className={field ? "min-w-0 flex-1 truncate text-left" : undefined}>{label}</span>
         <span aria-hidden="true" className="text-[9px] leading-none">{mark}</span>
       </button>
 
