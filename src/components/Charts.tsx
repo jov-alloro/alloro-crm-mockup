@@ -270,7 +270,7 @@ export function Ring({
           return seg;
         })}
       </svg>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <ul className={`flex min-w-0 basis-full flex-col gap-0.5 ${big ? "sm:basis-0 sm:flex-1" : ""}`}>
         {points.map((p, i) => {
           const lit = hot === i;
           const body = (
