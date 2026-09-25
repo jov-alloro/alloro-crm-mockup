@@ -383,7 +383,7 @@ export default function People({ filter, addOpen }: { filter?: PeopleFilter; add
         {verdict}
       </Verdict>
 
-      <TopTasks quiet />
+      <TopTasks slot={1} />
 
       {/*
         T63 — ⛔ THE ADD FORM OPENS OVER THE LIST, so the owner never loses their

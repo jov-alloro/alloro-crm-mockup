@@ -78,7 +78,7 @@ export default function Dashboard() {
         {cards.length === 0 ? "Nothing needs you this week." : `${plural(cards.length, "thing")} need${cards.length === 1 ? "s" : ""} you this week.`}
       </Verdict>
 
-      <TopTasks />
+      <TopTasks slot={0} />
 
       {/*
         T44 (Rev 9) — ⛔ THE GRID TILES COMPLETELY, AT EVERY COLUMN COUNT.

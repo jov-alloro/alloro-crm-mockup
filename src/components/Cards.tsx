@@ -2,7 +2,7 @@ import { Button, Card, Chip } from "./ui";
 import { useUi } from "../lib/ui-context";
 import { dismissCard } from "../lib/actions";
 import type { Card as CardModel, CardKind } from "../lib/cards";
-import type { IconName } from "./icons";
+import { Icon, type IconName } from "./icons";
 
 /**
  * T30 (Rev 8) — the card's action leads with the icon its KIND implies, not
@@ -20,32 +20,41 @@ function cardIcon(kind: CardKind): IconName {
 }
 
 /**
- * Rev 33 — "NEEDS YOU" IS A TASK RECOMMENDATION, NOT A PLACE.
+ * Rev 34 — ONE CARD PER SCREEN, IN ALLORO'S OWN "1 ACTION" STYLE.
  *
- * Jov: it becomes cards like Alloro's action card, shown on the Dashboard and
- * the other customer screens, top three only. There is no tab, no section and
- * no full list any more (that reverses Rev 32's section). Three is the whole
- * point: a list of 34 is a backlog, and a backlog is what people stop opening.
+ * Jov: "copy exactly the Mark done style", and "since there are three tabs, put
+ * one of each only — those top three, not three in a row on every screen."
+ * So the three highest-priority cards are SPREAD: the Dashboard shows the first,
+ * People the second, Conversation the third. No screen shows more than one, and
+ * no card is shown twice.
  *
- * ⛔ THE FIRST CARD HOLDS THE SCREEN'S ONE PRIMARY (Design §4.3) unless the
- * screen already has its own leading action, which is what `quiet` says —
- * People leads with "Add by hand".
+ * The look is copied from frontend/src/components/dashboard/ActionBannerView.tsx
+ * at origin/main 15d46f9 (reference/alloro-actionbannerview-2026-09-25.tsx): the
+ * accent-soft tint, 14px radius, 22px/20px padding, terracotta eyebrow, Spectral
+ * 21px title, 13.5px description, and a small outlined button.
+ *
+ * ⛔ THIS IS A DELIBERATE EXCEPTION to the five-role type roster (21px and 13.5px
+ * are not roles) and to "one primary per screen": the button is Alloro's outlined
+ * style, so no card holds a primary. Copying it exactly was the instruction, and
+ * approximating it was the defect.
  */
-export const TOP_TASKS = 3;
+export type TaskSlot = 0 | 1 | 2;
 
-export function TopTasks({ quiet }: { quiet?: boolean }) {
+const ACTION_BUTTON_CLASS =
+  "eyebrow inline-flex shrink-0 items-center gap-1.5 self-start rounded-[10px] border border-alloro-navy/15 bg-white/70 px-3 py-2 text-alloro-navy transition-colors hover:bg-white";
+
+export function TopTasks({ slot }: { slot: TaskSlot }) {
   const ui = useUi();
-  const top = ui.cards.slice(0, TOP_TASKS);
+  const card = ui.cards[slot];
   const paymentsDown = !ui.world.feeds.payments.ok;
   const formsDown = !ui.world.feeds.forms.ok;
-  if (top.length === 0 && !paymentsDown && !formsDown) return null;
+  if (!card && !paymentsDown && !formsDown) return null;
   return (
-    <section data-testid="top-tasks" aria-label="Do these first" className="mb-6">
-      {/* ⛔ Nobody is flagged while a feed is down (acceptance A26). These notices
-          used to sit above the Needs you list; they live with the recommendations
-          now, because they explain why the recommendations are fewer. */}
+    <section data-testid="top-tasks" aria-label="Do this first" className="mb-6 space-y-3">
+      {/* ⛔ Nobody is flagged while a feed is down (acceptance A26). The notices live
+          with the recommendation because they explain why there may be none. */}
       {paymentsDown ? (
-        <Card className="mb-3 border-amber">
+        <Card className="border-amber">
           <p className="t-body font-semibold" data-testid="feed-card">
             Alloro isn't receiving your payments since {ui.world.feeds.payments.downSince}.
           </p>
@@ -53,26 +62,84 @@ export function TopTasks({ quiet }: { quiet?: boolean }) {
         </Card>
       ) : null}
       {formsDown ? (
-        <Card className="mb-3 border-amber">
+        <Card className="border-amber">
           <p className="t-body font-semibold">Alloro isn't receiving website messages right now.</p>
           <p className="t-meta mt-1">Nothing is flagged as unanswered while this lasts. Check your own inbox.</p>
         </Card>
       ) : null}
-      {top.length > 0 ? (
-        <>
-          <h2 className="eyebrow mb-2">
-            {ui.cards.length > TOP_TASKS ? `Do these first · ${TOP_TASKS} of ${ui.cards.length}` : "Do these first"}
-          </h2>
-          <div className="space-y-3">
-            {top.map((c, i) => <CardRow key={c.id} card={c} task primary={!quiet && i === 0} />)}
-          </div>
-        </>
-      ) : null}
+      {card ? <TaskCard card={card} /> : null}
     </section>
   );
 }
 
-export function CardRow({ card, n, task, primary = true }: { card: CardModel; n?: number; task?: boolean; primary?: boolean }) {
+function TaskCard({ card }: { card: CardModel }) {
+  const ui = useUi();
+  const p = card.p;
+  const view = card.messageId ? `#/conversation/${card.messageId}` : `#/p/${p.c.id}`;
+  const doMove = () => {
+    switch (card.move) {
+      case "reply": ui.go(`#/conversation/${card.messageId ?? p.c.id}`); break;
+      case "call": ui.go(`#/p/${p.c.id}?call=1`); break;
+      case "checkin":
+      case "follow-up":
+      case "thanks": ui.go(`#/p/${p.c.id}`); break;
+    }
+  };
+  /* Same rule as CardRow (A69): the card is a mouse convenience, the SENTENCE is the
+     keyboard path, and a click that landed on a control is not the card's. */
+  const openIfBody = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, a[href], input, select, textarea")) return;
+    ui.go(view);
+  };
+  return (
+    <div
+      data-testid="card"
+      data-card-id={card.id}
+      data-person-id={p.c.id}
+      onClick={openIfBody}
+      className="cursor-pointer rounded-[14px] border border-accent-soft-line bg-accent-soft px-[22px] py-5"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="eyebrow mb-1.5 text-alloro-orange" data-testid="card-chip">{card.chip}</div>
+          <h3 className="font-display text-[21px] font-medium leading-[1.2] text-alloro-navy">
+            <button
+              type="button"
+              data-testid="card-why"
+              onClick={() => ui.go(view)}
+              className="block text-left underline-offset-4 hover:underline"
+            >
+              {card.why}
+            </button>
+          </h3>
+          {card.moneyLine ? (
+            <p className="mt-1.5 max-w-[720px] text-[13.5px] leading-[1.55] text-alloro-navy">{card.moneyLine}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          <button type="button" data-btn="true" data-testid="card-action" onClick={doMove} className={ACTION_BUTTON_CLASS}>
+            <Icon name={cardIcon(card.kind)} size={13} />
+            {card.action}
+          </button>
+          {card.dismissible ? (
+            <button
+              type="button"
+              data-btn="true"
+              data-testid="card-dismiss"
+              onClick={() => { ui.act((w) => dismissCard(w, card.id)); ui.toast("Cleared."); }}
+              className={ACTION_BUTTON_CLASS}
+            >
+              <Icon name="close" size={13} />
+              Not now
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CardRow({ card, n, primary = true }: { card: CardModel; n?: number; primary?: boolean }) {
   const ui = useUi();
   const p = card.p;
 
@@ -123,7 +190,7 @@ export function CardRow({ card, n, task, primary = true }: { card: CardModel; n?
   };
 
   return (
-    <Card className={task ? "!border-alloro-orange/30 !bg-alloro-orange/[0.07]" : ""}>
+    <Card>
       {/* A card is identified by its person, not by a first name: the demo has
           more than one Owen, and a check that matched on "Owen" matched the
           wrong card. */}
@@ -137,9 +204,7 @@ export function CardRow({ card, n, task, primary = true }: { card: CardModel; n?
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2">
             {n ? <span className="eyebrow" data-testid="card-number">{n}</span> : null}
-            {task
-              ? <span className="eyebrow text-alloro-orange-text-safe" data-testid="card-chip">{card.chip}</span>
-              : <Chip tone={card.kind === "came-back" ? "plain" : "amber"}>{card.chip}</Chip>}
+            <Chip tone={card.kind === "came-back" ? "plain" : "amber"}>{card.chip}</Chip>
           </div>
           {/* Design §6.1 — the sentence, before any number.
               ⛔ T95: the sentence IS the keyboard path into the card. It carries no
@@ -150,7 +215,7 @@ export function CardRow({ card, n, task, primary = true }: { card: CardModel; n?
             type="button"
             data-testid="card-why"
             onClick={() => ui.go(view)}
-            className={`${task ? "t-verdict" : "t-body font-semibold"} block text-left underline-offset-4 hover:underline`}
+            className="t-body block text-left font-semibold underline-offset-4 hover:underline"
           >
             {card.why}
           </button>

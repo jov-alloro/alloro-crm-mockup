@@ -109,7 +109,7 @@ export default function Conversation() {
             : `${openCount} ${openCount === 1 ? "person is" : "people are"} waiting to hear from you.`}
       </Verdict>
 
-      <TopTasks />
+      <TopTasks slot={2} />
 
       {formsDown ? (
         <Card className="mb-4 border-amber">
@@ -207,7 +207,7 @@ export default function Conversation() {
             <Card className="p-0" data-testid="inbox">
               <ul>
                 {rows.slice(0, 60).map((r, i) => (
-                  <MessageRow key={r.e.id} r={r} first={i === 0 && r.open} lead={i === 0 && r.open && ui.cards.length === 0} />
+                  <MessageRow key={r.e.id} r={r} first={i === 0 && r.open} lead={i === 0 && r.open} />
                 ))}
               </ul>
             </Card>
