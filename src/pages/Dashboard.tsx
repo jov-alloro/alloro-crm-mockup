@@ -46,8 +46,9 @@ export default function Dashboard() {
       inside the removed money card, since it was never really about the
       headline number: it names one person who used to pay and hasn't been back.
     */
-    const slipping = [...people].filter((p) => p.isQuiet && p.spent12 > 0).sort((a, b) => b.spent12 - a.spent12)[0];
-    return { total: people.length, wrote: wrote.length, became: became.length, cameBack, unanswered, slipping };
+    const slippingAll = [...people].filter((p) => p.isQuiet && p.spent12 > 0).sort((a, b) => b.spent12 - a.spent12);
+    const slipping = slippingAll[0];
+    return { total: people.length, wrote: wrote.length, became: became.length, cameBack, unanswered, slipping, slippingList: slippingAll.slice(0, 5), slippingCount: slippingAll.length };
   }, [model, cards]);
 
   /** Every chart's points, built from the same events every other screen reads. */
@@ -267,12 +268,32 @@ export default function Dashboard() {
             {paymentsDown ? (
               <p className="t-body" data-testid="money-unknown">Alloro can't see your payments right now, so this is unknown.</p>
             ) : stats.slipping ? (
+              /* Rev 36 — ⛔ A LIST, NOT ONE LINE IN A TWO-WIDE CARD. Jov: "fix the wide white
+                 space." The tile is as tall as its neighbour's donut, so one sentence left half of
+                 it empty (T53's pool of white, again). The fix is more of the same fact, not less
+                 room: the five who paid the most, each with what they spent and when they last paid. */
               <>
-                <p className="t-body font-semibold">{stats.slipping.c.name} used to pay, and hasn't been back.</p>
-                <p className="t-meta mb-3">
-                  {money(stats.slipping.spentTotal)} altogether
-                  {stats.slipping.lastBuy ? `, last paid ${dateWords(stats.slipping.lastBuy, world.today)}.` : "."}
+                <p className="t-body font-semibold">
+                  {stats.slippingCount === 1
+                    ? "1 person used to pay and hasn't been back."
+                    : `${stats.slippingCount} people used to pay and haven't been back.`}
                 </p>
+                <ul className="mt-3 mb-3 divide-y divide-line-soft" data-testid="slipping-list">
+                  {stats.slippingList.map((p) => (
+                    <li key={p.c.id}>
+                      <button
+                        type="button"
+                        onClick={() => ui.go(`#/p/${p.c.id}`)}
+                        className="tap flex w-full items-baseline justify-between gap-4 py-2.5 text-left"
+                      >
+                        <span className="t-body min-w-0 truncate font-semibold">{p.c.name}</span>
+                        <span className="t-meta shrink-0 text-right">
+                          {money(p.spentTotal)}{p.lastBuy ? ` · last paid ${dateWords(p.lastBuy, world.today)}` : ""}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </>
             ) : (
               <p className="t-meta">Everybody who used to pay is still coming back.</p>
